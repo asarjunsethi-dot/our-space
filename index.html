@@ -15,24 +15,23 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
   <style>
-    /* Force the liquid to animate height */
-    .liquid-fill { transition: height 0.7s ease-in-out; }
-    
-    /* Simple Float Animation */
-    @keyframes floatUp {
-      0% { transform: translateY(0); opacity: 1; }
-      100% { transform: translateY(-80px); opacity: 0; }
-    }
-    .heart-pop { position: absolute; animation: floatUp 0.6s ease-out forwards; }
+    body { background-color: #FFF5F7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .liquid-fill { transition: height 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    @keyframes heartFloat { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100px); opacity: 0; } }
+    .heart-pop { position: absolute; animation: heartFloat 0.7s ease-out forwards; pointer-events: none; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .chat-bubble { border-radius: 1.25rem; }
+    .chat-bubble-me { border-bottom-right-radius: 0.25rem; }
+    .chat-bubble-them { border-bottom-left-radius: 0.25rem; }
   </style>
 </head>
-<body class="bg-[#FFF5F7]">
+<body class="overscroll-none select-none">
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React;
 
-    // --- Firebase Setup ---
     const firebaseConfig = {
       apiKey: "AIzaSyAd64Xht4RMPgIBYNssGYeYxFB_zyZUTsk",
       authDomain: "our-space-79672.firebaseapp.com",
@@ -46,105 +45,207 @@
     const db = firebase.firestore();
     const auth = firebase.auth();
 
+    const Icon = ({ name, size=24, color="currentColor", fill="none" }) => {
+      const paths = {
+        heart: "M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z",
+        chat: "M7.9 20A9 9 0 1 0 4 16.1L2 22Z",
+        star: "m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z",
+        send: "M22 2 11 13M22 2l-7 20-4-9-9-4 22-7Z",
+        lock: "M7 11V7a5 5 0 0 1 10 0v4M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"
+      };
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d={paths[name]} />
+        </svg>
+      );
+    };
+
     function App() {
-      const [user, setUser] = useState(localStorage.getItem('user_choice'));
+      const [isUnlocked, setIsUnlocked] = useState(() => localStorage.getItem('os_unlocked') === 'true');
+      const [user, setUser] = useState(() => localStorage.getItem('os_user'));
+      const [tab, setTab] = useState('jar');
       const [count, setCount] = useState(0);
+      const [messages, setMessages] = useState([]);
       const [pop, setPop] = useState(null);
+      const [passInput, setPassInput] = useState("");
+      const chatEndRef = useRef(null);
 
       useEffect(() => {
         auth.signInAnonymously().then(() => {
-          // Listen to the jar count
-          db.collection("shared").doc("jar").onSnapshot((doc) => {
-            if (doc.exists) {
-              setCount(doc.data().currentCount || 0);
-            } else {
-              // Create it if it doesn't exist
-              db.collection("shared").doc("jar").set({ currentCount: 0 });
-            }
+          // Sync Jar + Auto-fix if missing
+          db.collection("shared").doc("jar").onSnapshot(doc => {
+            if (doc.exists) setCount(doc.data().currentCount || 0);
+            else db.collection("shared").doc("jar").set({ currentCount: 0 });
+          });
+          // Sync Chat
+          db.collection("messages").orderBy("timestamp", "desc").limit(50).onSnapshot(snap => {
+            setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse());
           });
         });
       }, []);
 
-      const handleAddHeart = async (e) => {
-        // Visual Pop
-        const rect = e.currentTarget.getBoundingClientRect();
-        setPop({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-        setTimeout(() => setPop(null), 600);
+      useEffect(() => {
+        if (tab === 'chat') chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, [messages, tab]);
 
-        // Update Database
-        const newCount = count + 1;
-        if (newCount >= 1000) {
-          await db.collection("shared").doc("jar").update({ currentCount: 0 });
-          alert("🎉 1000 HEARTS! The jar has been reset!");
-        } else {
-          await db.collection("shared").doc("jar").update({
-            currentCount: firebase.firestore.FieldValue.increment(1)
-          });
+      const handleUnlock = (e) => {
+        e.preventDefault();
+        if (passInput.toLowerCase() === "nikiarjun") {
+          setIsUnlocked(true);
+          localStorage.setItem('os_unlocked', 'true');
         }
       };
 
-      if (!user) return (
-        <div className="h-screen flex flex-col items-center justify-center p-10 space-y-4">
-          <h1 className="text-2xl font-bold text-rose-600">Who is here?</h1>
-          <button onClick={() => {setUser('Niki'); localStorage.setItem('user_choice', 'Niki')}} className="w-full p-5 bg-white rounded-2xl shadow-md text-xl font-bold">Niki</button>
-          <button onClick={() => {setUser('Arjun'); localStorage.setItem('user_choice', 'Arjun')}} className="w-full p-5 bg-white rounded-2xl shadow-md text-xl font-bold">Arjun</button>
+      const handleAddHeart = async (e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = (e.clientX || e.touches[0].clientX) - rect.left;
+        const y = (e.clientY || e.touches[0].clientY) - rect.top;
+        setPop({ x, y });
+        setTimeout(() => setPop(null), 600);
+        
+        if (count + 1 >= 1000) {
+          await db.collection("shared").doc("jar").update({ currentCount: 0 });
+        } else {
+          await db.collection("shared").doc("jar").update({ currentCount: firebase.firestore.FieldValue.increment(1) });
+        }
+      };
+
+      const handleSend = async (e) => {
+        e.preventDefault();
+        const text = e.target.msg.value;
+        if (!text.trim()) return;
+        e.target.msg.value = "";
+        await db.collection("messages").add({
+          text, sender: user, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      };
+
+      if (!isUnlocked) return (
+        <div className="h-screen flex flex-col items-center justify-center p-10 bg-white">
+          <Icon name="lock" size={48} color="#f43f5e" />
+          <h2 className="mt-4 mb-6 font-bold text-gray-400 uppercase tracking-widest text-sm">Our Private Space</h2>
+          <form onSubmit={handleUnlock} className="w-full space-y-3">
+            <input 
+              type="password" 
+              placeholder="Enter Password" 
+              className="w-full p-4 bg-gray-50 rounded-2xl border-none text-center outline-none focus:ring-2 ring-rose-200 transition-all"
+              onChange={(e) => setPassInput(e.target.value)}
+            />
+            <button className="w-full p-4 bg-rose-500 text-white rounded-2xl font-bold shadow-lg shadow-rose-200">Unlock</button>
+          </form>
         </div>
       );
 
-      const fillHeight = (count / 1000) * 100;
+      if (!user) return (
+        <div className="h-screen flex flex-col items-center justify-center p-10 space-y-4 bg-white">
+          <h1 className="text-3xl font-black text-rose-500 mb-2">Who are you?</h1>
+          <button onClick={() => {setUser('Niki'); localStorage.setItem('os_user', 'Niki')}} className="w-full p-6 bg-rose-50 rounded-3xl text-xl font-bold text-rose-600 border-2 border-rose-100">Niki</button>
+          <button onClick={() => {setUser('Arjun'); localStorage.setItem('os_user', 'Arjun')}} className="w-full p-6 bg-rose-50 rounded-3xl text-xl font-bold text-rose-600 border-2 border-rose-100">Arjun</button>
+        </div>
+      );
 
       return (
-        <div className="h-screen flex flex-col items-center justify-between py-12 bg-[#FFF5F7]">
-          <div className="text-center">
-            <h2 className="text-3xl font-black text-rose-500">Our Mood Jar</h2>
-            <p className="text-rose-300 font-bold uppercase text-xs tracking-widest mt-1">Logged in as {user}</p>
-          </div>
-
-          {/* THE JAR (Constructed with basic divs for maximum compatibility) */}
-          <div className="relative w-60 h-80 flex items-end justify-center">
-            {/* Glass Container */}
-            <div className="absolute inset-0 border-4 border-white bg-white/30 rounded-b-[80px] rounded-t-xl shadow-xl overflow-hidden">
-              {/* The Liquid */}
-              <div 
-                className="absolute bottom-0 w-full bg-gradient-to-t from-rose-500 to-pink-300 liquid-fill"
-                style={{ height: `${fillHeight}%` }}
-              />
-              
-              {/* The Number */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-5xl font-black text-rose-900/20">{count}</span>
-              </div>
+        <div className="h-screen flex flex-col bg-[#FFF5F7] max-w-md mx-auto overflow-hidden shadow-2xl border-x border-rose-100">
+          {/* Header */}
+          <header className="p-5 flex justify-between items-center bg-white/70 backdrop-blur-md sticky top-0 z-10 border-b border-rose-50">
+            <div className="flex items-center gap-2">
+              <Icon name="heart" size={20} color="#f43f5e" fill="#f43f5e" />
+              <span className="font-black text-rose-600 tracking-tight text-lg">OUR SPACE</span>
             </div>
-            
-            {/* Reflection shine on glass */}
-            <div className="absolute top-4 left-4 w-4 h-20 bg-white/20 rounded-full pointer-events-none" />
-          </div>
+            <button onClick={() => {localStorage.clear(); window.location.reload();}} className="text-[10px] font-black text-rose-300 uppercase bg-rose-50 px-3 py-1 rounded-full">Reset</button>
+          </header>
 
-          {/* THE BUTTON */}
-          <div className="flex flex-col items-center space-y-4 w-full px-10">
-            <button 
-              onClick={handleAddHeart}
-              className="relative w-24 h-24 bg-rose-500 rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform"
-            >
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="2">
-                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-              </svg>
-              
-              {pop && (
-                <div className="heart-pop" style={{ left: pop.x, top: pop.y }}>
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="#FDA4AF"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+          <main className="flex-1 relative overflow-hidden flex flex-col">
+            {tab === 'jar' && (
+              <div className="flex-1 flex flex-col items-center justify-around py-10 px-6 animate-in fade-in duration-500">
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-rose-900">The Mood Jar</h2>
+                  <div className="h-1 w-12 bg-rose-200 mx-auto mt-2 rounded-full"></div>
                 </div>
-              )}
-            </button>
-            <p className="text-rose-400 font-bold text-sm tracking-tighter">TAP TO FILL THE JAR</p>
-            <button onClick={() => {localStorage.clear(); window.location.reload();}} className="text-[10px] text-rose-200 underline mt-4">Switch User</button>
-          </div>
+
+                <div className="relative w-64 h-80 flex items-end justify-center">
+                  {/* Glass Structure */}
+                  <div className="absolute inset-0 border-[6px] border-white bg-white/40 rounded-b-[100px] rounded-t-3xl shadow-2xl overflow-hidden">
+                    {/* Liquid Fill */}
+                    <div 
+                      className="absolute bottom-0 w-full bg-gradient-to-t from-rose-500 via-pink-400 to-rose-300 liquid-fill" 
+                      style={{ height: `${(count/1000)*100}%` }}
+                    />
+                    {/* Centered Number */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-7xl font-black text-rose-950/10 select-none">{count}</span>
+                    </div>
+                  </div>
+                  {/* Reflection */}
+                  <div className="absolute top-6 left-8 w-3 h-24 bg-white/20 rounded-full pointer-events-none" />
+                </div>
+
+                <div className="flex flex-col items-center gap-4">
+                  <button 
+                    onPointerDown={handleAddHeart} 
+                    className="relative w-28 h-28 bg-rose-500 rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform border-4 border-white hover:bg-rose-600"
+                  >
+                    <Icon name="heart" size={48} color="white" fill="white" />
+                    {pop && <div className="heart-pop" style={{ left: pop.x, top: pop.y }}><Icon name="heart" size={40} color="#FDA4AF" fill="#FDA4AF" /></div>}
+                  </button>
+                  <p className="text-rose-400 text-xs font-black uppercase tracking-[0.2em]">Tap to fill</p>
+                </div>
+              </div>
+            )}
+
+            {tab === 'chat' && (
+              <div className="flex-1 flex flex-col h-full bg-white/40 animate-in slide-in-from-right duration-300">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 hide-scrollbar">
+                  {messages.map(m => (
+                    <div key={m.id} className={`flex ${m.sender === user ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[80%] p-3.5 shadow-sm text-sm font-semibold chat-bubble ${m.sender === user ? 'bg-rose-500 text-white chat-bubble-me' : 'bg-white text-rose-900 chat-bubble-them'}`}>
+                        {m.text}
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={chatEndRef} />
+                </div>
+                <form onSubmit={handleSend} className="p-4 bg-white flex gap-2 border-t border-rose-50 shadow-inner">
+                  <input name="msg" autoComplete="off" className="flex-1 bg-rose-50/50 border border-rose-100 p-4 rounded-2xl outline-none text-sm font-medium focus:bg-white transition-colors" placeholder="Send a message..." />
+                  <button className="bg-rose-500 text-white p-4 rounded-2xl shadow-lg active:scale-95 transition-transform"><Icon name="send" size={20} color="white" /></button>
+                </form>
+              </div>
+            )}
+
+            {tab === 'tracker' && (
+              <div className="flex-1 p-8 space-y-6 animate-in slide-in-from-left duration-300">
+                <div className="bg-white p-10 rounded-[50px] text-center shadow-xl border-4 border-rose-50">
+                  <p className="text-rose-300 text-xs font-black uppercase tracking-widest mb-3">Days Since "I Do"</p>
+                  <h3 className="text-7xl font-black text-rose-500 tabular-nums">
+                    {Math.floor((new Date() - new Date("2025-11-16")) / (1000 * 60 * 60 * 24))}
+                  </h3>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="bg-white/60 p-5 rounded-3xl flex justify-between items-center border border-white">
+                    <span className="font-bold text-rose-800">Our Date</span>
+                    <span className="text-rose-500 font-black">Nov 16, 2025</span>
+                  </div>
+                  <div className="bg-white/60 p-5 rounded-3xl flex justify-between items-center border border-white">
+                    <span className="font-bold text-rose-800">Target</span>
+                    <span className="text-rose-500 font-black">1000 Hearts</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </main>
+
+          {/* Navigation */}
+          <nav className="px-6 py-5 bg-white flex justify-around items-center border-t border-rose-100 pb-8">
+            <button onClick={() => setTab('chat')} className={`transition-all duration-300 ${tab === 'chat' ? 'text-rose-500 scale-125' : 'text-rose-200'}`}><Icon name="chat" size={28}/></button>
+            <button onClick={() => setTab('jar')} className={`transition-all duration-300 ${tab === 'jar' ? 'text-rose-500 scale-150' : 'text-rose-200'}`}><Icon name="heart" size={32} fill={tab === 'jar' ? "currentColor" : "none"}/></button>
+            <button onClick={() => setTab('tracker')} className={`transition-all duration-300 ${tab === 'tracker' ? 'text-rose-500 scale-125' : 'text-rose-200'}`}><Icon name="star" size={28}/></button>
+          </nav>
         </div>
       );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
