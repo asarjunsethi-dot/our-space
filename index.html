@@ -67,14 +67,13 @@
       appId: "1:350345009230:web:91fb621714c21d7e264b1f"
     };
 
-    // Initialize Firebase (Compat Version)
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // --- INLINE ICONS (To prevent loading errors) ---
+    // --- INLINE ICONS ---
     const Icon = ({ name, size=24, className="", fill="none" }) => {
       const icons = {
         heart: <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>,
@@ -115,13 +114,14 @@
       return { daysRemaining: Math.ceil(remainingTime / (1000 * 60 * 60 * 24)), progress, nextDate: nextOccurrence };
     };
 
+    // Added gradient colors for the jar liquid
     const MOODS = [
-      { id: 'happy', label: 'Happy', color: 'text-yellow-400' },
-      { id: 'loved', label: 'Loved', color: 'text-rose-500' },
-      { id: 'calm', label: 'Calm', color: 'text-blue-400' },
-      { id: 'energy', label: 'Energy', color: 'text-orange-500' },
-      { id: 'growth', label: 'Growth', color: 'text-green-500' },
-      { id: 'dreamy', label: 'Dreamy', color: 'text-purple-400' },
+      { id: 'happy', label: 'Happy', color: 'text-yellow-400', gradient: 'from-yellow-500 to-yellow-400' },
+      { id: 'loved', label: 'Loved', color: 'text-rose-500', gradient: 'from-rose-500 to-rose-400' },
+      { id: 'calm', label: 'Calm', color: 'text-blue-400', gradient: 'from-blue-500 to-blue-400' },
+      { id: 'energy', label: 'Energy', color: 'text-orange-500', gradient: 'from-orange-500 to-orange-400' },
+      { id: 'growth', label: 'Growth', color: 'text-green-500', gradient: 'from-green-500 to-green-400' },
+      { id: 'dreamy', label: 'Dreamy', color: 'text-purple-400', gradient: 'from-purple-500 to-purple-400' },
     ];
 
     function App() {
@@ -132,7 +132,7 @@
 
       const [config, setConfig] = useState(null);
       const [messages, setMessages] = useState([]);
-      const [jarData, setJarData] = useState({ currentCount: 0, totalHearts: 0, burstCount: 0 });
+      const [jarData, setJarData] = useState({ currentCount: 0, totalHearts: 0, burstCount: 0, moodCounts: {} });
 
       const [password, setPassword] = useState("");
       const [passwordError, setPasswordError] = useState(false);
@@ -225,7 +225,8 @@
         });
       };
 
-      const handleAddHeartToJar = async () => {
+      // UPDATED logic to track specific mood counts
+      const handleAddHeartToJar = async (mood) => {
         const docRef = db.collection("shared").doc("jar");
         const increment = firebase.firestore.FieldValue.increment(1);
         const isBursting = (jarData.currentCount || 0) + 1 >= 1000;
@@ -233,9 +234,18 @@
         if (isBursting) {
           setIsJarBursting(true);
           setTimeout(() => setIsJarBursting(false), 4000);
-          await docRef.set({ currentCount: 0, totalHearts: increment, burstCount: increment }, { merge: true });
+          await docRef.set({ 
+            currentCount: 0, 
+            totalHearts: increment, 
+            burstCount: increment,
+            moodCounts: {} // Reset the mood colors when jar bursts
+          }, { merge: true });
         } else {
-          await docRef.set({ currentCount: increment, totalHearts: increment }, { merge: true });
+          await docRef.set({ 
+            currentCount: increment, 
+            totalHearts: increment,
+            [`moodCounts.${mood.id}`]: increment // Increment specific mood
+          }, { merge: true });
         }
       };
 
@@ -271,6 +281,25 @@
         delay: `${Math.random() * 1.5}s`, duration: `${Math.random() * 2 + 3}s`
       })), [showEasterEgg]);
 
+      // Calculate the dominant color based on the highest mood count
+      const dominantMoodGradient = useMemo(() => {
+        if (!jarData.moodCounts || Object.keys(jarData.moodCounts).length === 0) {
+          return "from-rose-500 to-rose-400"; // Default empty jar color
+        }
+        
+        let maxCount = -1;
+        let dominantId = 'loved';
+        
+        for (const [moodId, count] of Object.entries(jarData.moodCounts)) {
+          if (count > maxCount) {
+            maxCount = count;
+            dominantId = moodId;
+          }
+        }
+        
+        const mood = MOODS.find(m => m.id === dominantId);
+        return mood ? mood.gradient : "from-rose-500 to-rose-400";
+      }, [jarData.moodCounts]);
 
       if (!isAuthReady) return <div className="h-screen w-full bg-rose-50 flex items-center justify-center"><Icon name="heart" className="text-rose-500 animate-pulse" size={50} /></div>;
 
@@ -436,7 +465,6 @@
                     
                     <div className="text-center mb-4 z-10"><h2 className="text-2xl font-black dark:text-white">Mood Jar</h2></div>
                     
-                    {/* UPDATED VISUAL JAR COMPONENT */}
                     <div className="w-full max-w-xs mx-auto mb-6 z-10 mt-auto flex flex-col items-center">
                       <div className="relative w-32 h-44 mb-3">
                         {/* Jar Lid */}
@@ -445,8 +473,8 @@
                         <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-16 h-3 border-l-4 border-r-4 border-gray-300 dark:border-gray-600 bg-white/40 dark:bg-gray-800/40 z-10"></div>
                         {/* Jar Body */}
                         <div className="absolute inset-0 border-4 border-gray-300 dark:border-gray-600 rounded-b-[2.5rem] rounded-t-3xl overflow-hidden bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm flex items-end shadow-inner z-10">
-                           {/* Liquid Fill */}
-                           <div className="w-full bg-gradient-to-t from-rose-500 to-rose-400 transition-all duration-700 ease-out relative flex items-start justify-center overflow-hidden" style={{ height: `${Math.min(100, ((jarData.currentCount || 0) / 1000) * 100)}%` }}>
+                           {/* Liquid Fill - dynamically updated based on dominant mood */}
+                           <div className={`w-full bg-gradient-to-t ${dominantMoodGradient} transition-colors duration-700 ease-out relative flex items-start justify-center overflow-hidden`} style={{ height: `${Math.min(100, ((jarData.currentCount || 0) / 1000) * 100)}%`, transitionProperty: 'height, background-color, border-color, text-decoration-color, fill, stroke' }}>
                               {/* Wave/Surface effect */}
                               <div className="absolute top-0 w-full h-2 bg-white/30 rounded-full scale-110"></div>
                               {/* Floating Hearts inside liquid */}
@@ -470,7 +498,6 @@
                         {jarData.currentCount || 0} / 1000 Hearts
                       </div>
                     </div>
-                    {/* END UPDATED JAR COMPONENT */}
 
                     <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl border dark:border-gray-700 z-10">
                       <p className="text-center text-xs font-bold text-gray-400 mb-4 uppercase">Tap to add your mood</p>
