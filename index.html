@@ -15,17 +15,35 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
   <style>
-    .jar-liquid { transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-    @keyframes tap-pulse { 0% { transform: scale(1); } 50% { transform: scale(0.9); } 100% { transform: scale(1); } }
-    .tap-active { animation: tap-pulse 0.2s ease-out; }
-    @keyframes float-up {
-      0% { transform: translateY(0) scale(1); opacity: 1; }
-      100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+    .jar-liquid { transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    
+    @keyframes burst-up {
+      0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+      100% { transform: translate(var(--tw-tx), var(--tw-ty)) scale(2); opacity: 0; }
     }
-    .floating-heart { position: absolute; animation: float-up 0.8s ease-out forwards; pointer-events: none; }
+    .burst-particle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      animation: burst-up 1.5s ease-out forwards;
+    }
+
+    @keyframes float-up-simple {
+      0% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(-100px); opacity: 0; }
+    }
+    .tap-heart { position: absolute; animation: float-up-simple 0.6s ease-out forwards; pointer-events: none; }
+    
+    .jar-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-1px, 0, 0); }
+      20%, 80% { transform: translate3d(2px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+      40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
   </style>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 overscroll-none">
+<body class="bg-rose-50 dark:bg-gray-900 overscroll-none select-none">
   <div id="root"></div>
 
   <script type="text/babel">
@@ -44,109 +62,123 @@
     const db = firebase.firestore();
     const auth = firebase.auth();
 
-    const Icon = ({ name, size=24, className="", fill="none" }) => {
+    const Icon = ({ name, size=24, className="", fill="none", style={} }) => {
       const icons = {
         heart: <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>,
         sparkles: <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>,
-        chat: <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>,
-        send: <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        chat: <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
       };
-      return <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{icons[name]}</svg>;
+      return <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>{icons[name]}</svg>;
     };
 
     function App() {
       const [activeProfile, setActiveProfile] = useState(() => localStorage.getItem('sl_profile'));
-      const [activeTab, setActiveTab] = useState('fun'); // Default to Jar for testing
+      const [activeTab, setActiveTab] = useState('fun');
       const [jarData, setJarData] = useState({ currentCount: 0 });
-      const [messages, setMessages] = useState([]);
-      const [clickEffect, setClickEffect] = useState(null);
+      const [tapEffect, setTapEffect] = useState(null);
+      const [isBursting, setIsBursting] = useState(false);
 
       useEffect(() => {
         auth.signInAnonymously().then(() => {
-          // Sync Mood Jar
           db.collection("shared").doc("jar").onSnapshot((doc) => {
-            if (doc.exists) setJarData(doc.data());
-            else db.collection("shared").doc("jar").set({ currentCount: 0 });
-          });
-          // Sync Chat
-          db.collection("messages").orderBy("timestamp", "desc").limit(30).onSnapshot((snap) => {
-            setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse());
+            if (doc.exists) {
+              const data = doc.data();
+              // Trigger burst if we just reset from 1000
+              if (data.currentCount === 0 && jarData.currentCount >= 999) {
+                triggerBurst();
+              }
+              setJarData(data);
+            }
           });
         });
-      }, []);
+      }, [jarData.currentCount]);
+
+      const triggerBurst = () => {
+        setIsBursting(true);
+        setTimeout(() => setIsBursting(false), 2000);
+      };
 
       const addHeart = async (e) => {
-        // Visual feedback
         const rect = e.currentTarget.getBoundingClientRect();
-        setClickEffect({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-        setTimeout(() => setClickEffect(null), 800);
+        setTapEffect({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+        setTimeout(() => setTapEffect(null), 600);
 
-        try {
-          await db.collection("shared").doc("jar").update({
-            currentCount: firebase.firestore.FieldValue.increment(1)
+        const nextCount = jarData.currentCount + 1;
+        
+        if (nextCount >= 1000) {
+          await db.collection("shared").doc("jar").update({ currentCount: 0 });
+        } else {
+          await db.collection("shared").doc("jar").update({ 
+            currentCount: firebase.firestore.FieldValue.increment(1) 
           });
-        } catch (err) {
-          console.error("Database Locked! Check your Firebase Rules.", err);
         }
       };
 
       if (!activeProfile) return (
-        <div className="h-screen flex flex-col items-center justify-center bg-rose-50 p-6 space-y-4">
-          <button onClick={() => {setActiveProfile('partner1'); localStorage.setItem('sl_profile', 'partner1')}} className="w-full max-w-xs p-6 bg-white rounded-3xl shadow-sm text-xl font-bold text-rose-500">Niki</button>
-          <button onClick={() => {setActiveProfile('partner2'); localStorage.setItem('sl_profile', 'partner2')}} className="w-full max-w-xs p-6 bg-white rounded-3xl shadow-sm text-xl font-bold text-rose-500">Arjun</button>
+        <div className="h-screen flex flex-col items-center justify-center space-y-4 p-10">
+          <button onClick={() => {setActiveProfile('p1'); localStorage.setItem('sl_profile', 'p1')}} className="w-full p-6 bg-white rounded-3xl shadow-xl text-2xl font-black text-rose-500">Niki</button>
+          <button onClick={() => {setActiveProfile('p2'); localStorage.setItem('sl_profile', 'p2')}} className="w-full p-6 bg-white rounded-3xl shadow-xl text-2xl font-black text-rose-500">Arjun</button>
         </div>
       );
 
-      const fillPercentage = Math.min(100, (jarData.currentCount / 1000) * 100);
+      const fillPercent = (jarData.currentCount / 1000) * 100;
 
       return (
-        <div className="h-screen flex flex-col bg-gray-50 max-w-md mx-auto overflow-hidden">
-          <main className="flex-1 relative flex flex-col p-6">
-            {activeTab === 'fun' ? (
-              <div className="flex flex-col items-center justify-between h-full py-10">
-                <h2 className="text-2xl font-bold text-gray-800">The Mood Jar</h2>
-                
-                {/* JAR COMPONENT */}
-                <div className="relative w-56 h-80 bg-white/40 border-4 border-white rounded-b-[80px] rounded-t-xl shadow-2xl overflow-hidden flex items-end">
-                  <div 
-                    className="w-full bg-gradient-to-t from-rose-500 to-pink-400 jar-liquid" 
-                    style={{ height: `${fillPercentage}%` }}
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className="text-4xl font-black text-white drop-shadow-md">{jarData.currentCount}</span>
-                  </div>
-                </div>
+        <div className="h-screen flex flex-col max-w-md mx-auto relative overflow-hidden bg-rose-50">
+          <main className="flex-1 flex flex-col items-center justify-between py-12 px-6">
+            <h2 className="text-3xl font-black text-rose-900 tracking-tight">Our Mood Jar</h2>
 
-                {/* HEART BUTTON */}
-                <button 
-                  onClick={addHeart}
-                  className="relative w-28 h-28 bg-rose-500 rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform"
-                >
-                  <Icon name="heart" size={48} fill="currentColor" className="text-white" />
-                  {clickEffect && (
-                    <div className="floating-heart text-rose-300" style={{ left: clickEffect.x, top: clickEffect.y }}>
-                      <Icon name="heart" size={32} fill="currentColor" />
-                    </div>
-                  )}
-                </button>
-                <p className="text-gray-400 font-medium">Tap to add a heart</p>
+            {/* THE JAR */}
+            <div className={`relative w-64 h-80 bg-white/60 border-4 border-white rounded-b-[100px] rounded-t-2xl shadow-2xl flex items-end overflow-hidden ${jarData.currentCount > 950 ? 'jar-shake' : ''}`}>
+              <div 
+                className="w-full bg-gradient-to-t from-rose-500 via-pink-400 to-rose-300 jar-liquid relative" 
+                style={{ height: `${fillPercent}%` }}
+              >
+                {/* Sparkles inside liquid */}
+                <Icon name="sparkles" size={20} className="absolute top-2 left-10 text-white/50 animate-pulse" fill="currentColor" />
+                <Icon name="sparkles" size={14} className="absolute top-5 right-12 text-white/30 animate-bounce" fill="currentColor" />
               </div>
-            ) : (
-              <div className="flex flex-col h-full">
-                <div className="flex-1 overflow-y-auto space-y-2">
-                  {messages.map(m => (
-                    <div key={m.id} className={`flex ${m.sender === activeProfile ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`p-3 rounded-2xl ${m.sender === activeProfile ? 'bg-rose-500 text-white' : 'bg-white border'}`}>{m.text}</div>
-                    </div>
-                  ))}
-                </div>
+
+              {/* Celebration Particles */}
+              {isBursting && Array.from({length: 30}).map((_, i) => (
+                <Icon 
+                  key={i} 
+                  name="heart" 
+                  size={Math.random() * 30 + 10} 
+                  className="burst-particle text-rose-500" 
+                  fill="currentColor"
+                  style={{ 
+                    '--tw-tx': `${(Math.random() - 0.5) * 600}px`, 
+                    '--tw-ty': `${(Math.random() - 0.5) * 600}px` 
+                  }} 
+                />
+              ))}
+
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-5xl font-black text-white drop-shadow-lg">{jarData.currentCount}</span>
               </div>
-            )}
+            </div>
+
+            {/* INTERACTION AREA */}
+            <div className="flex flex-col items-center space-y-4">
+              <button 
+                onClick={addHeart}
+                className="relative w-32 h-32 bg-white rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-transform border-4 border-rose-200"
+              >
+                <Icon name="heart" size={56} fill="currentColor" className="text-rose-500" />
+                {tapEffect && (
+                  <div className="tap-heart text-rose-400" style={{ left: tapEffect.x, top: tapEffect.y }}>
+                    <Icon name="heart" size={40} fill="currentColor" />
+                  </div>
+                )}
+              </button>
+              <p className="text-rose-900/40 font-bold uppercase tracking-widest text-sm">Tap to fill our jar</p>
+            </div>
           </main>
 
-          <nav className="p-6 bg-white border-t flex justify-around">
-            <button onClick={() => setActiveTab('chat')} className={activeTab === 'chat' ? 'text-rose-500' : 'text-gray-300'}><Icon name="chat" size={32}/></button>
-            <button onClick={() => setActiveTab('fun')} className={activeTab === 'fun' ? 'text-rose-500' : 'text-gray-300'}><Icon name="sparkles" size={32}/></button>
+          <nav className="p-6 bg-white/80 backdrop-blur-md flex justify-around border-t border-rose-100">
+            <button onClick={() => setActiveTab('chat')} className={activeTab === 'chat' ? 'text-rose-500' : 'text-rose-200'}><Icon name="chat" size={32}/></button>
+            <button onClick={() => setActiveTab('fun')} className={activeTab === 'fun' ? 'text-rose-500' : 'text-rose-200'}><Icon name="sparkles" size={32}/></button>
           </nav>
         </div>
       );
