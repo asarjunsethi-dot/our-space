@@ -2,14 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Our Space</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = { darkMode: 'class', theme: { extend: {} } }
-  </script>
-
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -19,45 +15,22 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
   <style>
-    @keyframes gradient-xy {
-      0%, 100% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
+    .jar-liquid { transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+    @keyframes tap-pulse { 0% { transform: scale(1); } 50% { transform: scale(0.9); } 100% { transform: scale(1); } }
+    .tap-active { animation: tap-pulse 0.2s ease-out; }
+    @keyframes float-up {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
     }
-    .animate-gradient-xy {
-      background-size: 400% 400%;
-      animation: gradient-xy 15s ease infinite;
-    }
-    @keyframes floatUp {
-      0% { transform: translateY(20px) scale(0.8) rotate(-15deg); opacity: 0; }
-      20% { opacity: 1; transform: translateY(-20vh) scale(1.1) rotate(15deg); }
-      80% { opacity: 1; transform: translateY(-70vh) scale(1) rotate(-15deg); }
-      100% { transform: translateY(-100vh) scale(1.3) rotate(20deg); opacity: 0; }
-    }
-    .floating-heart-anim {
-      bottom: -30px;
-      opacity: 0;
-      animation: floatUp linear forwards;
-    }
-    @keyframes burstOut {
-      0% { transform: translate(0, 0) scale(0.1); opacity: 1; }
-      100% { transform: translate(var(--tx), var(--ty)) scale(1.5) rotate(var(--rot)); opacity: 0; }
-    }
-    .jar-burst-particle {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      animation: burstOut 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-    }
+    .floating-heart { position: absolute; animation: float-up 0.8s ease-out forwards; pointer-events: none; }
   </style>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900">
-  
+<body class="bg-gray-50 dark:bg-gray-900 overscroll-none">
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef, useMemo } = React;
+    const { useState, useEffect, useRef } = React;
 
-    // --- FIREBASE INITIALIZATION ---
     const firebaseConfig = {
       apiKey: "AIzaSyAd64Xht4RMPgIBYNssGYeYxFB_zyZUTsk",
       authDomain: "our-space-79672.firebaseapp.com",
@@ -67,400 +40,119 @@
       appId: "1:350345009230:web:91fb621714c21d7e264b1f"
     };
 
-    // Initialize Firebase (Compat Version)
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
-    const auth = firebase.auth();
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const auth = firebase.auth();
 
-    // --- INLINE ICONS (To prevent loading errors) ---
     const Icon = ({ name, size=24, className="", fill="none" }) => {
       const icons = {
         heart: <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>,
-        lock: <><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>,
-        sun: <><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></>,
-        moon: <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>,
         sparkles: <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>,
-        arrowRight: <><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></>,
-        edit: <><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></>,
         chat: <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>,
-        flame: <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>,
-        send: <><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>,
-        user: <><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>
+        send: <polygon points="22 2 15 22 11 13 2 9 22 2"/>
       };
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-          {icons[name]}
-        </svg>
-      );
+      return <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{icons[name]}</svg>;
     };
-
-    // --- HELPER FUNCTIONS ---
-    const getEventProgress = (dateString) => {
-      if (!dateString) return { daysRemaining: 0, progress: 0, nextDate: null };
-      const now = new Date(); now.setHours(0, 0, 0, 0);
-      const [year, month, day] = dateString.split('-').map(Number);
-      if (!month || !day) return { daysRemaining: 0, progress: 0, nextDate: null };
-      
-      let nextOccurrence = new Date(now.getFullYear(), month - 1, day);
-      if (nextOccurrence < now) nextOccurrence = new Date(now.getFullYear() + 1, month - 1, day);
-
-      let prevOccurrence = new Date(nextOccurrence.getFullYear() - 1, month - 1, day);
-      const totalTime = nextOccurrence.getTime() - prevOccurrence.getTime();
-      const elapsedTime = now.getTime() - prevOccurrence.getTime();
-      const remainingTime = nextOccurrence.getTime() - now.getTime();
-
-      let progress = Math.max(0, Math.min(100, (elapsedTime / totalTime) * 100));
-      return { daysRemaining: Math.ceil(remainingTime / (1000 * 60 * 60 * 24)), progress, nextDate: nextOccurrence };
-    };
-
-    const MOODS = [
-      { id: 'happy', label: 'Happy', color: 'text-yellow-400' },
-      { id: 'loved', label: 'Loved', color: 'text-rose-500' },
-      { id: 'calm', label: 'Calm', color: 'text-blue-400' },
-      { id: 'energy', label: 'Energy', color: 'text-orange-500' },
-      { id: 'growth', label: 'Growth', color: 'text-green-500' },
-      { id: 'dreamy', label: 'Dreamy', color: 'text-purple-400' },
-    ];
 
     function App() {
-      const [isUnlocked, setIsUnlocked] = useState(() => localStorage.getItem('sl_unlocked') === 'true');
-      const [activeProfile, setActiveProfile] = useState(() => localStorage.getItem('sl_profile') || null);
-      const [activeTab, setActiveTab] = useState(() => localStorage.getItem('sl_tab') || 'chat');
-      const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('sl_theme') === 'dark');
-
-      const [config, setConfig] = useState(null);
+      const [activeProfile, setActiveProfile] = useState(() => localStorage.getItem('sl_profile'));
+      const [activeTab, setActiveTab] = useState('fun'); // Default to Jar for testing
+      const [jarData, setJarData] = useState({ currentCount: 0 });
       const [messages, setMessages] = useState([]);
-      const [jarData, setJarData] = useState({ currentCount: 0, totalHearts: 0, burstCount: 0 });
-
-      const [password, setPassword] = useState("");
-      const [passwordError, setPasswordError] = useState(false);
-      const [inputText, setInputText] = useState("");
-      const [isEditing, setIsEditing] = useState(false);
-      const [isJarBursting, setIsJarBursting] = useState(false);
-      const [showEasterEgg, setShowEasterEgg] = useState(false);
-      const [isAuthReady, setIsAuthReady] = useState(false);
-      
-      const lastProcessedMsgId = useRef(null);
-      const scrollRef = useRef(null);
-      
-      const [p1Name, setP1Name] = useState("Niki");
-      const [p2Name, setP2Name] = useState("Arjun");
-      const [p1Bday, setP1Bday] = useState("2009-07-04");
-      const [p2Bday, setP2Bday] = useState("2009-02-12");
-      const [startDate, setStartDate] = useState("2025-11-16");
-
-      useEffect(() => { localStorage.setItem('sl_unlocked', isUnlocked); }, [isUnlocked]);
-      useEffect(() => { localStorage.setItem('sl_profile', activeProfile || ''); }, [activeProfile]);
-      useEffect(() => { localStorage.setItem('sl_tab', activeTab); }, [activeTab]);
-      useEffect(() => { localStorage.setItem('sl_theme', isDarkMode ? 'dark' : 'light'); }, [isDarkMode]);
+      const [clickEffect, setClickEffect] = useState(null);
 
       useEffect(() => {
         auth.signInAnonymously().then(() => {
-          setIsAuthReady(true);
-          
-          const unsubConfig = db.collection("shared").doc("config").onSnapshot((docSnap) => {
-            if (docSnap.exists) {
-              const data = docSnap.data();
-              setConfig(data);
-              setP1Name(data.partner1); setP2Name(data.partner2);
-              setP1Bday(data.p1Bday); setP2Bday(data.p2Bday); setStartDate(data.anniversary);
-            } else {
-              setIsEditing(true);
-            }
+          // Sync Mood Jar
+          db.collection("shared").doc("jar").onSnapshot((doc) => {
+            if (doc.exists) setJarData(doc.data());
+            else db.collection("shared").doc("jar").set({ currentCount: 0 });
           });
-
-          const unsubJar = db.collection("shared").doc("jar").onSnapshot((docSnap) => {
-            if (docSnap.exists) setJarData(docSnap.data());
+          // Sync Chat
+          db.collection("messages").orderBy("timestamp", "desc").limit(30).onSnapshot((snap) => {
+            setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse());
           });
-
-          const unsubMessages = db.collection("messages").orderBy("timestamp", "asc").onSnapshot((snapshot) => {
-            const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setMessages(msgs);
-          });
-
-          return () => { unsubConfig(); unsubJar(); unsubMessages(); };
-        }).catch(err => console.error("Firebase Auth Error:", err));
+        });
       }, []);
 
-      useEffect(() => {
-        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        if (messages.length === 0 || !activeProfile) return;
-        
-        const latestMsg = messages[messages.length - 1];
-        if (!lastProcessedMsgId.current) { lastProcessedMsgId.current = latestMsg.id; return; }
-        if (lastProcessedMsgId.current === latestMsg.id) return;
-        lastProcessedMsgId.current = latestMsg.id;
+      const addHeart = async (e) => {
+        // Visual feedback
+        const rect = e.currentTarget.getBoundingClientRect();
+        setClickEffect({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+        setTimeout(() => setClickEffect(null), 800);
 
-        if (latestMsg.sender !== activeProfile && /i love you/i.test(latestMsg.text)) {
-          setShowEasterEgg(true);
-          setTimeout(() => setShowEasterEgg(false), 5000); 
-        }
-      }, [messages, activeTab, activeProfile]);
-
-      const handleUnlock = (e) => {
-        e.preventDefault();
-        if (password === "Niki+Arjun") { setIsUnlocked(true); setPasswordError(false); } 
-        else { setPasswordError(true); setPassword(""); }
-      };
-
-      const handleSaveConfig = async (e) => {
-        e.preventDefault();
-        await db.collection("shared").doc("config").set({
-          partner1: p1Name, partner2: p2Name, p1Bday, p2Bday, anniversary: startDate
-        });
-        setIsEditing(false);
-      };
-
-      const sendMessage = async (e) => {
-        e.preventDefault();
-        if (!inputText.trim() || !activeProfile || !config) return;
-        const txt = inputText; setInputText(""); 
-        
-        await db.collection("messages").add({
-          text: txt, sender: activeProfile,
-          senderName: activeProfile === 'partner1' ? config.partner1 : config.partner2,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      };
-
-      const handleAddHeartToJar = async () => {
-        const docRef = db.collection("shared").doc("jar");
-        const increment = firebase.firestore.FieldValue.increment(1);
-        const isBursting = (jarData.currentCount || 0) + 1 >= 1000;
-
-        if (isBursting) {
-          setIsJarBursting(true);
-          setTimeout(() => setIsJarBursting(false), 4000);
-          await docRef.set({ currentCount: 0, totalHearts: increment, burstCount: increment }, { merge: true });
-        } else {
-          await docRef.set({ currentCount: increment, totalHearts: increment }, { merge: true });
+        try {
+          await db.collection("shared").doc("jar").update({
+            currentCount: firebase.firestore.FieldValue.increment(1)
+          });
+        } catch (err) {
+          console.error("Database Locked! Check your Firebase Rules.", err);
         }
       };
 
-      const daysSinceAnniversary = useMemo(() => {
-        if (!config?.anniversary) return 0;
-        const [year, month, day] = config.anniversary.split('-');
-        const start = new Date(year, month - 1, day);
-        const now = new Date(); start.setHours(0,0,0,0); now.setHours(0,0,0,0);
-        const diff = now - start;
-        return diff < 0 ? 0 : Math.floor(diff / (1000 * 60 * 60 * 24));
-      }, [config]);
+      if (!activeProfile) return (
+        <div className="h-screen flex flex-col items-center justify-center bg-rose-50 p-6 space-y-4">
+          <button onClick={() => {setActiveProfile('partner1'); localStorage.setItem('sl_profile', 'partner1')}} className="w-full max-w-xs p-6 bg-white rounded-3xl shadow-sm text-xl font-bold text-rose-500">Niki</button>
+          <button onClick={() => {setActiveProfile('partner2'); localStorage.setItem('sl_profile', 'partner2')}} className="w-full max-w-xs p-6 bg-white rounded-3xl shadow-sm text-xl font-bold text-rose-500">Arjun</button>
+        </div>
+      );
 
-      const upcomingEvents = useMemo(() => {
-        if (!config) return [];
-        const events = [
-          { id: 'p1', name: `${config.partner1}'s Birthday`, dateStr: config.p1Bday, color: 'bg-green-500' },
-          { id: 'p2', name: `${config.partner2}'s Birthday`, dateStr: config.p2Bday, color: 'bg-purple-500' },
-          { id: 'anniv', name: `Our Anniversary`, dateStr: config.anniversary, color: 'bg-rose-500' }
-        ].filter(e => e.dateStr);
-        return events.map(evt => ({ ...evt, ...getEventProgress(evt.dateStr) }))
-          .filter(evt => evt.nextDate !== null)
-          .sort((a, b) => a.daysRemaining - b.daysRemaining);
-      }, [config]);
+      const fillPercentage = Math.min(100, (jarData.currentCount / 1000) * 100);
 
-      const burstParticles = useMemo(() => Array.from({ length: 100 }).map((_, i) => ({
-        id: i, tx: `${(Math.random() - 0.5) * 800}px`, ty: `${(Math.random() - 0.5) * 800}px`,
-        rot: `${Math.random() * 720}deg`, delay: `${Math.random() * 0.2}s`,
-        colorClass: MOODS[Math.floor(Math.random() * MOODS.length)].color, size: Math.random() * 20 + 15
-      })), [isJarBursting]);
-
-      const floatingHearts = useMemo(() => Array.from({ length: 25 }).map((_, i) => ({
-        id: i, size: Math.random() * 20 + 15, left: `${Math.random() * 90 + 5}%`,
-        delay: `${Math.random() * 1.5}s`, duration: `${Math.random() * 2 + 3}s`
-      })), [showEasterEgg]);
-
-
-      if (!isAuthReady) return <div className="h-screen w-full bg-rose-50 flex items-center justify-center"><Icon name="heart" className="text-rose-500 animate-pulse" size={50} /></div>;
-
-      // --- 1. LOGIN ---
-      if (!isUnlocked) {
-        return (
-          <div className={isDarkMode ? 'dark' : ''}>
-            <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 dark:from-gray-900 dark:via-gray-800 animate-gradient-xy flex flex-col items-center justify-center p-6 relative">
-              <div className="absolute top-6 right-6 z-20">
-                <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-3 bg-white/50 dark:bg-gray-800/50 rounded-full text-gray-500">
-                  <Icon name={isDarkMode ? "sun" : "moon"} size={24} />
-                </button>
-              </div>
-              <div className="z-10 flex flex-col items-center w-full max-w-xs">
-                <div className="w-20 h-20 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-lg mb-6 relative">
-                  <Icon name="heart" className="text-rose-500 animate-pulse" size={40} fill="currentColor" />
-                  <div className="absolute -bottom-1 -right-1 bg-rose-100 dark:bg-rose-900 rounded-full p-1.5 border-2 border-white dark:border-gray-800">
-                    <Icon name="lock" size={12} className="text-rose-600 dark:text-rose-400" />
-                  </div>
-                </div>
-                <h1 className="text-2xl font-black text-gray-800 dark:text-white mb-2">Our Private Space</h1>
-                <p className="text-sm text-gray-500 mb-8">Enter your shared password.</p>
-                <form onSubmit={handleUnlock} className="w-full space-y-4">
-                  <input type="password" value={password} onChange={(e) => { setPassword(e.target.value); setPasswordError(false); }} placeholder="Password" className={`w-full px-4 py-3 bg-white dark:bg-gray-800 border ${passwordError ? 'border-red-400' : 'border-transparent'} rounded-xl text-center focus:outline-none dark:text-white`} />
-                  <button type="submit" disabled={!password} className="w-full bg-rose-500 text-white font-bold py-3 rounded-xl hover:bg-rose-600">Unlock</button>
-                </form>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      // --- 2. EDIT CONFIG ---
-      if (isEditing) {
-        return (
-          <div className={isDarkMode ? 'dark' : ''}>
-            <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 dark:from-gray-900 dark:via-gray-800 animate-gradient-xy flex flex-col items-center justify-center p-6">
-              <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl p-8 shadow-xl">
-                <div className="flex flex-col items-center mb-6">
-                  <Icon name="sparkles" className="text-rose-500 mb-2" size={32} />
-                  <h2 className="text-2xl font-bold dark:text-white">{!config ? "Set Up Our Space" : "Edit Details"}</h2>
-                </div>
-                <form onSubmit={handleSaveConfig} className="space-y-4">
-                  <div className="flex gap-4">
-                    <div className="flex-1"><label className="text-xs text-gray-500">Partner 1</label><input required type="text" value={p1Name} onChange={e => setP1Name(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white" /></div>
-                    <div className="flex-1"><label className="text-xs text-gray-500">Partner 2</label><input required type="text" value={p2Name} onChange={e => setP2Name(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white" /></div>
-                  </div>
-                  <div><label className="text-xs text-gray-500">{p1Name}'s Birthday</label><input type="date" value={p1Bday} onChange={e => setP1Bday(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white" /></div>
-                  <div><label className="text-xs text-gray-500">{p2Name}'s Birthday</label><input type="date" value={p2Bday} onChange={e => setP2Bday(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white" /></div>
-                  <div><label className="text-xs text-gray-500">Anniversary</label><input required type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white" /></div>
-                  <div className="pt-6 flex gap-3">
-                    {config && <button type="button" onClick={() => setIsEditing(false)} className="flex-1 bg-gray-100 dark:bg-gray-700 dark:text-white font-bold py-3 rounded-xl">Cancel</button>}
-                    <button type="submit" className="flex-1 bg-rose-500 text-white font-bold py-3 rounded-xl">Save</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      // --- 3. PROFILE SELECT ---
-      if (!activeProfile && config) {
-        return (
-          <div className={isDarkMode ? 'dark' : ''}>
-            <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 dark:from-gray-900 dark:via-gray-800 flex flex-col items-center justify-center p-6">
-              <Icon name="heart" className="text-rose-500 mb-6 animate-pulse" size={80} fill="currentColor" />
-              <h1 className="text-3xl font-black dark:text-white mb-2">Our Space</h1>
-              <p className="text-rose-400 mb-10 text-center">Who is logging in?</p>
-              <div className="w-full max-w-sm space-y-4">
-                <button onClick={() => setActiveProfile('partner1')} className="w-full flex items-center justify-between p-5 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
-                  <div className="flex items-center gap-4"><div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center text-green-500"><Icon name="heart" size={24} fill="currentColor"/></div><span className="font-bold text-lg dark:text-white">{config.partner1}</span></div><Icon name="arrowRight" className="text-gray-300" size={24} />
-                </button>
-                <button onClick={() => setActiveProfile('partner2')} className="w-full flex items-center justify-between p-5 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
-                  <div className="flex items-center gap-4"><div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center text-purple-500"><Icon name="heart" size={24} fill="currentColor"/></div><span className="font-bold text-lg dark:text-white">{config.partner2}</span></div><Icon name="arrowRight" className="text-gray-300" size={24} />
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      // --- 4. MAIN APP ---
       return (
-        <div className={isDarkMode ? 'dark' : ''}>
-          <div className="min-h-screen bg-gradient-to-br from-rose-50 to-rose-100 dark:from-gray-900 flex justify-center">
-            <div className="w-full max-w-md h-screen flex flex-col bg-gray-50 dark:bg-gray-900 relative">
-              
-              <header className="px-6 py-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700 flex justify-between z-10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-rose-500 rounded-full flex items-center justify-center"><Icon name="heart" className="text-white" size={20} fill="currentColor" /></div>
-                  <div><h1 className="font-bold dark:text-white leading-tight">Our Space</h1><p className="text-xs text-rose-500 font-medium">{activeProfile === 'partner1' ? config?.partner1 : config?.partner2}</p></div>
-                </div>
-                <div className="flex gap-1">
-                  <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 text-gray-400"><Icon name={isDarkMode ? "sun" : "moon"} size={20}/></button>
-                  <button onClick={() => setIsEditing(true)} className="p-2 text-gray-400"><Icon name="edit" size={20}/></button>
-                </div>
-              </header>
-
-              <nav className="flex bg-white dark:bg-gray-800 z-10 px-2 pt-2">
-                <button onClick={() => setActiveTab('chat')} className={`flex-1 pb-3 pt-2 flex items-center justify-center gap-2 font-bold border-b-2 ${activeTab === 'chat' ? 'border-rose-500 text-rose-600' : 'border-transparent text-gray-400'}`}><Icon name="chat" size={18}/> Chat</button>
-                <button onClick={() => setActiveTab('tracker')} className={`flex-1 pb-3 pt-2 flex items-center justify-center gap-2 font-bold border-b-2 ${activeTab === 'tracker' ? 'border-rose-500 text-rose-600' : 'border-transparent text-gray-400'}`}><Icon name="flame" size={18}/> Tracker</button>
-                <button onClick={() => setActiveTab('fun')} className={`flex-1 pb-3 pt-2 flex items-center justify-center gap-2 font-bold border-b-2 ${activeTab === 'fun' ? 'border-rose-500 text-rose-600' : 'border-transparent text-gray-400'}`}><Icon name="sparkles" size={18}/> Fun</button>
-              </nav>
-
-              <main className="flex-1 overflow-hidden relative flex flex-col dark:bg-[#111827]">
+        <div className="h-screen flex flex-col bg-gray-50 max-w-md mx-auto overflow-hidden">
+          <main className="flex-1 relative flex flex-col p-6">
+            {activeTab === 'fun' ? (
+              <div className="flex flex-col items-center justify-between h-full py-10">
+                <h2 className="text-2xl font-bold text-gray-800">The Mood Jar</h2>
                 
-                {/* CHAT */}
-                {activeTab === 'chat' && (
-                  <div className="flex flex-col h-full w-full relative">
-                    {showEasterEgg && <div className="absolute inset-0 z-50 pointer-events-none flex justify-center">{floatingHearts.map(h => <Icon key={h.id} name="heart" className="floating-heart-anim text-rose-500 absolute" size={h.size} fill="currentColor" style={{ left: h.left, animationDelay: h.delay, animationDuration: h.duration }} />)}</div>}
-                    <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
-                      {messages.map((msg, idx) => {
-                        const isMe = msg.sender === activeProfile;
-                        const showName = !isMe && (idx === 0 || messages[idx-1].sender !== msg.sender);
-                        const time = msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Just now';
-                        return (
-                          <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-2`}>
-                            {showName && <span className="text-[10px] text-gray-400 ml-1 mb-1">{msg.senderName}</span>}
-                            <div className={`max-w-[75%] px-4 py-2.5 text-[15px] ${isMe ? 'bg-rose-500 text-white rounded-2xl rounded-br-sm' : 'bg-white dark:bg-gray-800 dark:text-white rounded-2xl rounded-bl-sm border dark:border-gray-700'}`}><p className="break-words whitespace-pre-wrap">{msg.text}</p></div>
-                            <p className="text-[10px] mt-1 text-gray-400">{time}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <form onSubmit={sendMessage} className="p-3 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex gap-2 items-end z-10">
-                      <textarea value={inputText} onChange={e => setInputText(e.target.value)} placeholder="Message..." className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-2xl text-[15px] dark:text-white focus:outline-none resize-none" rows="1" />
-                      <button type="submit" disabled={!inputText.trim()} className="w-11 h-11 bg-rose-500 text-white rounded-full flex items-center justify-center disabled:opacity-50"><Icon name="send" size={18} className="ml-1" /></button>
-                    </form>
+                {/* JAR COMPONENT */}
+                <div className="relative w-56 h-80 bg-white/40 border-4 border-white rounded-b-[80px] rounded-t-xl shadow-2xl overflow-hidden flex items-end">
+                  <div 
+                    className="w-full bg-gradient-to-t from-rose-500 to-pink-400 jar-liquid" 
+                    style={{ height: `${fillPercentage}%` }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="text-4xl font-black text-white drop-shadow-md">{jarData.currentCount}</span>
                   </div>
-                )}
+                </div>
 
-                {/* TRACKER */}
-                {activeTab === 'tracker' && (
-                  <div className="p-6 h-full overflow-y-auto space-y-6">
-                    <div className="bg-gradient-to-br from-rose-500 to-pink-500 p-8 rounded-3xl text-center text-white shadow-lg">
-                      <p className="text-rose-100 text-sm font-bold uppercase tracking-widest mb-2">Days Together</p>
-                      <h2 className="text-6xl font-black mb-1 drop-shadow-md">{daysSinceAnniversary}</h2>
+                {/* HEART BUTTON */}
+                <button 
+                  onClick={addHeart}
+                  className="relative w-28 h-28 bg-rose-500 rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform"
+                >
+                  <Icon name="heart" size={48} fill="currentColor" className="text-white" />
+                  {clickEffect && (
+                    <div className="floating-heart text-rose-300" style={{ left: clickEffect.x, top: clickEffect.y }}>
+                      <Icon name="heart" size={32} fill="currentColor" />
                     </div>
-                    <div className="grid grid-cols-2 gap-4 mt-6">
-                      <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl border dark:border-gray-700 flex flex-col items-center"><Icon name="heart" className="text-rose-500 mb-2" size={28} fill="currentColor"/><p className="text-3xl font-black dark:text-white mb-1">{jarData.totalHearts || 0}</p><p className="text-[11px] text-gray-500 font-bold uppercase text-center">Hearts</p></div>
-                      <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl border dark:border-gray-700 flex flex-col items-center"><Icon name="sparkles" className="text-yellow-500 mb-2" size={28} fill="currentColor"/><p className="text-3xl font-black dark:text-white mb-1">{jarData.burstCount || 0}</p><p className="text-[11px] text-gray-500 font-bold uppercase text-center">Bursts</p></div>
+                  )}
+                </button>
+                <p className="text-gray-400 font-medium">Tap to add a heart</p>
+              </div>
+            ) : (
+              <div className="flex flex-col h-full">
+                <div className="flex-1 overflow-y-auto space-y-2">
+                  {messages.map(m => (
+                    <div key={m.id} className={`flex ${m.sender === activeProfile ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`p-3 rounded-2xl ${m.sender === activeProfile ? 'bg-rose-500 text-white' : 'bg-white border'}`}>{m.text}</div>
                     </div>
-                    <div className="space-y-4 pb-10 mt-8">
-                      <h3 className="text-lg font-bold dark:text-white px-2">Upcoming</h3>
-                      {upcomingEvents.map((evt) => (
-                        <div key={evt.id} className="bg-white dark:bg-gray-800 p-4 rounded-2xl border dark:border-gray-700">
-                          <div className="flex justify-between items-end mb-3">
-                            <div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${evt.color}`}><Icon name="heart" size={20} fill="currentColor"/></div><div><h4 className="font-bold dark:text-white">{evt.name}</h4><p className="text-xs text-gray-400">{evt.nextDate.toLocaleDateString(undefined, {month: 'long', day: 'numeric'})}</p></div></div>
-                            <span className={`text-sm font-black ${evt.daysRemaining === 0 ? 'text-rose-500 animate-pulse' : 'text-gray-600 dark:text-gray-300'}`}>{evt.daysRemaining === 0 ? 'Today!' : `${evt.daysRemaining} days`}</span>
-                          </div>
-                          <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mt-1 relative"><div className={`absolute top-0 left-0 h-full rounded-full ${evt.color}`} style={{ width: `${evt.progress}%` }} /></div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  ))}
+                </div>
+              </div>
+            )}
+          </main>
 
-                {/* FUN */}
-                {activeTab === 'fun' && (
-                  <div className="h-full flex flex-col p-6 w-full relative overflow-y-auto pb-8">
-                    {isJarBursting && <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">{burstParticles.map(p => <Icon key={p.id} name="heart" size={p.size} className={`jar-burst-particle ${p.colorClass}`} fill="currentColor" style={{ '--tx': p.tx, '--ty': p.ty, '--rot': p.rot, animationDelay: p.delay }} />)}</div>}
-                    <div className="text-center mb-4 z-10"><h2 className="text-2xl font-black dark:text-white">Mood Jar</h2></div>
-                    <div className="w-full max-w-xs mx-auto mb-8 z-10 mt-auto">
-                      <div className="flex justify-between text-sm font-bold text-gray-500 mb-2"><span>{jarData.currentCount || 0} / 1000</span><span className="text-rose-500">{(((jarData.currentCount || 0) / 1000) * 100).toFixed(1)}%</span></div>
-                      <div className="w-full h-4 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"><div className="h-full bg-rose-500 transition-all" style={{ width: `${Math.min(100, ((jarData.currentCount || 0) / 1000) * 100)}%` }}></div></div>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl border dark:border-gray-700 z-10">
-                      <p className="text-center text-xs font-bold text-gray-400 mb-4 uppercase">Tap to add your mood</p>
-                      <div className="grid grid-cols-3 gap-y-4 gap-x-2 justify-items-center">
-                        {MOODS.map(mood => (
-                          <button key={mood.id} onClick={() => handleAddHeartToJar(mood)} className="flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 w-full group"><div className="w-12 h-12 rounded-full bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 flex items-center justify-center"><Icon name="heart" size={24} className={mood.color} fill="currentColor" /></div><span className="text-xs font-bold dark:text-gray-300">{mood.label}</span></button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </main>
-
-              <footer className="p-3 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex justify-center z-10">
-                <button onClick={() => setActiveProfile(null)} className="text-xs font-bold text-gray-400 hover:text-rose-500 flex items-center gap-2 px-4 py-2"><Icon name="user" size={14} /> Switch Profile</button>
-              </footer>
-            </div>
-          </div>
+          <nav className="p-6 bg-white border-t flex justify-around">
+            <button onClick={() => setActiveTab('chat')} className={activeTab === 'chat' ? 'text-rose-500' : 'text-gray-300'}><Icon name="chat" size={32}/></button>
+            <button onClick={() => setActiveTab('fun')} className={activeTab === 'fun' ? 'text-rose-500' : 'text-gray-300'}><Icon name="sparkles" size={32}/></button>
+          </nav>
         </div>
       );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
