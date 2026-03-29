@@ -57,8 +57,8 @@
       animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     }
     @keyframes pulseGlow {
-      0%, 100% { filter: drop-shadow(0 0 10px rgba(244, 63, 94, 0.8)); transform: scale(1); }
-      50% { filter: drop-shadow(0 0 30px rgba(244, 63, 94, 1)); transform: scale(1.1); }
+      0%, 100% { filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.8)); transform: scale(1); }
+      50% { filter: drop-shadow(0 0 30px rgba(168, 85, 247, 1)); transform: scale(1.1); }
     }
     .halfway-anim {
       animation: pulseGlow 1.5s ease-in-out infinite;
@@ -69,7 +69,7 @@
     }
   </style>
 </head>
-<body class="bg-gray-50 dark:bg-purple-950">
+<body class="bg-gray-50 dark:bg-gray-950">
   
   <div id="root"></div>
 
@@ -316,7 +316,7 @@
         const events = [
           { id: 'p1', name: `${config.partner1}'s Birthday`, dateStr: config.p1Bday, color: 'bg-green-500' },
           { id: 'p2', name: `${config.partner2}'s Birthday`, dateStr: config.p2Bday, color: 'bg-purple-500' },
-          { id: 'anniv', name: `Our Anniversary`, dateStr: config.anniversary, color: 'bg-rose-500' }
+          { id: 'anniv', name: `Our Anniversary`, dateStr: config.anniversary, color: 'bg-rose-500 dark:bg-purple-500' }
         ].filter(e => e.dateStr);
         return events.map(evt => ({ ...evt, ...getEventProgress(evt.dateStr) }))
           .filter(evt => evt.nextDate !== null)
@@ -339,30 +339,30 @@
         delay: `${Math.random() * 1.5}s`, duration: `${Math.random() * 2 + 3}s`
       })), [showEasterEgg]);
 
-      if (!isAuthReady) return <div className="h-screen w-full bg-rose-50 dark:bg-purple-950 flex items-center justify-center"><Icon name="heart" className="text-rose-500 animate-pulse" size={50} /></div>;
+      if (!isAuthReady) return <div className="h-screen w-full bg-rose-50 dark:bg-gray-950 flex items-center justify-center"><Icon name="heart" className="text-rose-500 dark:text-purple-500 animate-pulse" size={50} /></div>;
 
       // --- 1. LOGIN ---
       if (!isUnlocked) {
         return (
           <div className={isDarkMode ? 'dark' : ''}>
-            <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 dark:from-purple-950 dark:via-purple-900 dark:to-purple-950 animate-gradient-xy flex flex-col items-center justify-center p-6 relative">
+            <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 animate-gradient-xy flex flex-col items-center justify-center p-6 relative">
               <div className="absolute top-6 right-6 z-20">
-                <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-3 bg-white/50 dark:bg-purple-800/50 rounded-full text-gray-500 dark:text-purple-200">
+                <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-3 bg-white/50 dark:bg-gray-800/80 rounded-full text-gray-500 dark:text-gray-300">
                   <Icon name={isDarkMode ? "sun" : "moon"} size={24} />
                 </button>
               </div>
               <div className="z-10 flex flex-col items-center w-full max-w-xs">
-                <div className="w-20 h-20 bg-white dark:bg-purple-900 rounded-full flex items-center justify-center shadow-lg mb-6 relative">
-                  <Icon name="heart" className="text-rose-500 animate-pulse" size={40} fill="currentColor" />
-                  <div className="absolute -bottom-1 -right-1 bg-rose-100 dark:bg-purple-800 rounded-full p-1.5 border-2 border-white dark:border-purple-900">
-                    <Icon name="lock" size={12} className="text-rose-600 dark:text-purple-300" />
+                <div className="w-20 h-20 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center shadow-lg mb-6 relative border dark:border-gray-700">
+                  <Icon name="heart" className="text-rose-500 dark:text-purple-500 animate-pulse" size={40} fill="currentColor" />
+                  <div className="absolute -bottom-1 -right-1 bg-rose-100 dark:bg-gray-800 rounded-full p-1.5 border-2 border-white dark:border-gray-900">
+                    <Icon name="lock" size={12} className="text-rose-600 dark:text-purple-400" />
                   </div>
                 </div>
                 <h1 className="text-2xl font-black text-gray-800 dark:text-white mb-2">Our Private Space</h1>
-                <p className="text-sm text-gray-500 dark:text-purple-300 mb-8">Enter your shared password.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Enter your shared password.</p>
                 <form onSubmit={handleUnlock} className="w-full space-y-4">
-                  <input type="password" value={password} onChange={(e) => { setPassword(e.target.value); setPasswordError(false); }} placeholder="Password" className={`w-full px-4 py-3 bg-white dark:bg-purple-900 border ${passwordError ? 'border-red-400' : 'border-transparent'} rounded-xl text-center focus:outline-none dark:text-white`} />
-                  <button type="submit" disabled={!password} className="w-full bg-rose-500 text-white font-bold py-3 rounded-xl hover:bg-rose-600">Unlock</button>
+                  <input type="password" value={password} onChange={(e) => { setPassword(e.target.value); setPasswordError(false); }} placeholder="Password" className={`w-full px-4 py-3 bg-white dark:bg-gray-800 border ${passwordError ? 'border-red-400' : 'border-transparent dark:border-gray-700'} rounded-xl text-center focus:outline-none dark:text-white dark:focus:border-purple-500 transition-colors`} />
+                  <button type="submit" disabled={!password} className="w-full bg-rose-500 dark:bg-purple-600 text-white font-bold py-3 rounded-xl hover:bg-rose-600 dark:hover:bg-purple-500 transition-colors">Unlock</button>
                 </form>
               </div>
             </div>
@@ -374,23 +374,23 @@
       if (isEditing) {
         return (
           <div className={isDarkMode ? 'dark' : ''}>
-            <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 dark:from-purple-950 dark:via-purple-900 flex flex-col items-center justify-center p-6">
-              <div className="bg-white dark:bg-purple-900 w-full max-w-md rounded-3xl p-8 shadow-xl">
+            <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 dark:from-gray-900 dark:via-gray-800 flex flex-col items-center justify-center p-6">
+              <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl p-8 shadow-xl dark:border dark:border-gray-800">
                 <div className="flex flex-col items-center mb-6">
-                  <Icon name="sparkles" className="text-rose-500 mb-2" size={32} />
+                  <Icon name="sparkles" className="text-rose-500 dark:text-purple-500 mb-2" size={32} />
                   <h2 className="text-2xl font-bold dark:text-white">{!config ? "Set Up Our Space" : "Edit Details"}</h2>
                 </div>
                 <form onSubmit={handleSaveConfig} className="space-y-4">
                   <div className="flex gap-4">
-                    <div className="flex-1"><label className="text-xs text-gray-500 dark:text-purple-300">Partner 1</label><input required type="text" value={p1Name} onChange={e => setP1Name(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-purple-800 dark:text-white border border-transparent dark:border-purple-700" /></div>
-                    <div className="flex-1"><label className="text-xs text-gray-500 dark:text-purple-300">Partner 2</label><input required type="text" value={p2Name} onChange={e => setP2Name(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-purple-800 dark:text-white border border-transparent dark:border-purple-700" /></div>
+                    <div className="flex-1"><label className="text-xs text-gray-500 dark:text-gray-400">Partner 1</label><input required type="text" value={p1Name} onChange={e => setP1Name(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white border border-transparent dark:border-gray-700 focus:outline-none dark:focus:border-purple-500 transition-colors" /></div>
+                    <div className="flex-1"><label className="text-xs text-gray-500 dark:text-gray-400">Partner 2</label><input required type="text" value={p2Name} onChange={e => setP2Name(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white border border-transparent dark:border-gray-700 focus:outline-none dark:focus:border-purple-500 transition-colors" /></div>
                   </div>
-                  <div><label className="text-xs text-gray-500 dark:text-purple-300">{p1Name}'s Birthday</label><input type="date" value={p1Bday} onChange={e => setP1Bday(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-purple-800 dark:text-white border border-transparent dark:border-purple-700" /></div>
-                  <div><label className="text-xs text-gray-500 dark:text-purple-300">{p2Name}'s Birthday</label><input type="date" value={p2Bday} onChange={e => setP2Bday(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-purple-800 dark:text-white border border-transparent dark:border-purple-700" /></div>
-                  <div><label className="text-xs text-gray-500 dark:text-purple-300">Anniversary</label><input required type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-purple-800 dark:text-white border border-transparent dark:border-purple-700" /></div>
+                  <div><label className="text-xs text-gray-500 dark:text-gray-400">{p1Name}'s Birthday</label><input type="date" value={p1Bday} onChange={e => setP1Bday(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white border border-transparent dark:border-gray-700 focus:outline-none dark:focus:border-purple-500 transition-colors" /></div>
+                  <div><label className="text-xs text-gray-500 dark:text-gray-400">{p2Name}'s Birthday</label><input type="date" value={p2Bday} onChange={e => setP2Bday(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white border border-transparent dark:border-gray-700 focus:outline-none dark:focus:border-purple-500 transition-colors" /></div>
+                  <div><label className="text-xs text-gray-500 dark:text-gray-400">Anniversary</label><input required type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full mt-1 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white border border-transparent dark:border-gray-700 focus:outline-none dark:focus:border-purple-500 transition-colors" /></div>
                   <div className="pt-6 flex gap-3">
-                    {config && <button type="button" onClick={() => setIsEditing(false)} className="flex-1 bg-gray-100 dark:bg-purple-800 dark:text-white font-bold py-3 rounded-xl">Cancel</button>}
-                    <button type="submit" className="flex-1 bg-rose-500 text-white font-bold py-3 rounded-xl">Save</button>
+                    {config && <button type="button" onClick={() => setIsEditing(false)} className="flex-1 bg-gray-100 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 font-bold py-3 rounded-xl transition-colors">Cancel</button>}
+                    <button type="submit" className="flex-1 bg-rose-500 dark:bg-purple-600 hover:bg-rose-600 dark:hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition-colors">Save</button>
                   </div>
                 </form>
               </div>
@@ -403,16 +403,16 @@
       if (!activeProfile && config) {
         return (
           <div className={isDarkMode ? 'dark' : ''}>
-            <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 dark:from-purple-950 dark:via-purple-900 flex flex-col items-center justify-center p-6">
-              <Icon name="heart" className="text-rose-500 mb-6 animate-pulse" size={80} fill="currentColor" />
+            <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100 dark:from-gray-950 dark:via-gray-900 flex flex-col items-center justify-center p-6">
+              <Icon name="heart" className="text-rose-500 dark:text-purple-500 mb-6 animate-pulse" size={80} fill="currentColor" />
               <h1 className="text-3xl font-black dark:text-white mb-2">Our Space</h1>
-              <p className="text-rose-400 dark:text-purple-300 mb-10 text-center">Who is logging in?</p>
+              <p className="text-rose-400 dark:text-purple-400 mb-10 text-center">Who is logging in?</p>
               <div className="w-full max-w-sm space-y-4">
-                <button onClick={() => setActiveProfile('partner1')} className="w-full flex items-center justify-between p-5 bg-white dark:bg-purple-900 rounded-2xl shadow-sm">
-                  <div className="flex items-center gap-4"><div className="w-12 h-12 bg-green-50 dark:bg-purple-800/50 rounded-full flex items-center justify-center text-green-500"><Icon name="heart" size={24} fill="currentColor"/></div><span className="font-bold text-lg dark:text-white">{config.partner1}</span></div><Icon name="arrowRight" className="text-gray-300 dark:text-purple-700" size={24} />
+                <button onClick={() => setActiveProfile('partner1')} className="w-full flex items-center justify-between p-5 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border dark:border-gray-800 hover:dark:border-purple-500/50 transition-colors">
+                  <div className="flex items-center gap-4"><div className="w-12 h-12 bg-green-50 dark:bg-gray-800 rounded-full flex items-center justify-center text-green-500"><Icon name="heart" size={24} fill="currentColor"/></div><span className="font-bold text-lg dark:text-white">{config.partner1}</span></div><Icon name="arrowRight" className="text-gray-300 dark:text-gray-600" size={24} />
                 </button>
-                <button onClick={() => setActiveProfile('partner2')} className="w-full flex items-center justify-between p-5 bg-white dark:bg-purple-900 rounded-2xl shadow-sm">
-                  <div className="flex items-center gap-4"><div className="w-12 h-12 bg-purple-50 dark:bg-purple-800/50 rounded-full flex items-center justify-center text-purple-500"><Icon name="heart" size={24} fill="currentColor"/></div><span className="font-bold text-lg dark:text-white">{config.partner2}</span></div><Icon name="arrowRight" className="text-gray-300 dark:text-purple-700" size={24} />
+                <button onClick={() => setActiveProfile('partner2')} className="w-full flex items-center justify-between p-5 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border dark:border-gray-800 hover:dark:border-purple-500/50 transition-colors">
+                  <div className="flex items-center gap-4"><div className="w-12 h-12 bg-purple-50 dark:bg-gray-800 rounded-full flex items-center justify-center text-purple-500"><Icon name="heart" size={24} fill="currentColor"/></div><span className="font-bold text-lg dark:text-white">{config.partner2}</span></div><Icon name="arrowRight" className="text-gray-300 dark:text-gray-600" size={24} />
                 </button>
               </div>
             </div>
@@ -423,38 +423,38 @@
       // --- 4. MAIN APP ---
       return (
         <div className={isDarkMode ? 'dark' : ''}>
-          <div className="min-h-screen bg-gradient-to-br from-rose-50 to-rose-100 dark:from-purple-950 dark:to-purple-900 flex justify-center">
-            <div className="w-full max-w-md h-screen flex flex-col bg-gray-50 dark:bg-purple-950 relative shadow-xl">
+          <div className="min-h-screen bg-gradient-to-br from-rose-50 to-rose-100 dark:from-gray-950 dark:to-gray-900 flex justify-center">
+            <div className="w-full max-w-md h-screen flex flex-col bg-gray-50 dark:bg-gray-950 relative shadow-xl">
               
-              <header className="px-6 py-4 bg-white dark:bg-purple-900 border-b dark:border-purple-800 flex justify-between z-10">
+              <header className="px-6 py-4 bg-white dark:bg-gray-900 border-b dark:border-gray-800 flex justify-between z-10">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-rose-500 rounded-full flex items-center justify-center"><Icon name="heart" className="text-white" size={20} fill="currentColor" /></div>
-                  <div><h1 className="font-bold dark:text-white leading-tight">Our Space</h1><p className="text-xs text-rose-500 font-medium">{activeProfile === 'partner1' ? config?.partner1 : config?.partner2}</p></div>
+                  <div className="w-10 h-10 bg-rose-500 dark:bg-purple-600 rounded-full flex items-center justify-center"><Icon name="heart" className="text-white" size={20} fill="currentColor" /></div>
+                  <div><h1 className="font-bold dark:text-white leading-tight">Our Space</h1><p className="text-xs text-rose-500 dark:text-purple-400 font-medium">{activeProfile === 'partner1' ? config?.partner1 : config?.partner2}</p></div>
                 </div>
                 <div className="flex gap-1">
-                  <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 text-gray-400 dark:text-purple-300"><Icon name={isDarkMode ? "sun" : "moon"} size={20}/></button>
-                  <button onClick={() => setIsEditing(true)} className="p-2 text-gray-400 dark:text-purple-300"><Icon name="edit" size={20}/></button>
+                  <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 text-gray-400 dark:text-gray-500 hover:dark:text-white transition-colors"><Icon name={isDarkMode ? "sun" : "moon"} size={20}/></button>
+                  <button onClick={() => setIsEditing(true)} className="p-2 text-gray-400 dark:text-gray-500 hover:dark:text-white transition-colors"><Icon name="edit" size={20}/></button>
                 </div>
               </header>
 
-              <nav className="flex bg-white dark:bg-purple-900 z-10 px-2 pt-2 border-b dark:border-purple-800">
-                <button onClick={() => setActiveTab('chat')} className={`relative flex-1 pb-3 pt-2 flex items-center justify-center gap-2 font-bold border-b-2 transition-colors ${activeTab === 'chat' ? 'border-rose-500 text-rose-600' : 'border-transparent text-gray-400 dark:text-purple-400'}`}>
+              <nav className="flex bg-white dark:bg-gray-900 z-10 px-2 pt-2 border-b dark:border-gray-800">
+                <button onClick={() => setActiveTab('chat')} className={`relative flex-1 pb-3 pt-2 flex items-center justify-center gap-2 font-bold border-b-2 transition-colors ${activeTab === 'chat' ? 'border-rose-500 text-rose-600 dark:border-purple-500 dark:text-purple-400' : 'border-transparent text-gray-400 dark:text-gray-500 hover:dark:text-gray-300'}`}>
                   <div className="relative">
                     <Icon name="chat" size={18}/>
-                    {unreadChat && <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 bg-rose-500 border-2 border-white dark:border-purple-900 rounded-full animate-pulse"></span>}
+                    {unreadChat && <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 bg-rose-500 dark:bg-purple-500 border-2 border-white dark:border-gray-900 rounded-full animate-pulse"></span>}
                   </div>
                   Chat
                 </button>
-                <button onClick={() => setActiveTab('tracker')} className={`flex-1 pb-3 pt-2 flex items-center justify-center gap-2 font-bold border-b-2 transition-colors ${activeTab === 'tracker' ? 'border-rose-500 text-rose-600' : 'border-transparent text-gray-400 dark:text-purple-400'}`}><Icon name="flame" size={18}/> Tracker</button>
-                <button onClick={() => setActiveTab('fun')} className={`flex-1 pb-3 pt-2 flex items-center justify-center gap-2 font-bold border-b-2 transition-colors ${activeTab === 'fun' ? 'border-rose-500 text-rose-600' : 'border-transparent text-gray-400 dark:text-purple-400'}`}><Icon name="sparkles" size={18}/> Fun</button>
+                <button onClick={() => setActiveTab('tracker')} className={`flex-1 pb-3 pt-2 flex items-center justify-center gap-2 font-bold border-b-2 transition-colors ${activeTab === 'tracker' ? 'border-rose-500 text-rose-600 dark:border-purple-500 dark:text-purple-400' : 'border-transparent text-gray-400 dark:text-gray-500 hover:dark:text-gray-300'}`}><Icon name="flame" size={18}/> Tracker</button>
+                <button onClick={() => setActiveTab('fun')} className={`flex-1 pb-3 pt-2 flex items-center justify-center gap-2 font-bold border-b-2 transition-colors ${activeTab === 'fun' ? 'border-rose-500 text-rose-600 dark:border-purple-500 dark:text-purple-400' : 'border-transparent text-gray-400 dark:text-gray-500 hover:dark:text-gray-300'}`}><Icon name="sparkles" size={18}/> Fun</button>
               </nav>
 
-              <main className="flex-1 overflow-hidden relative flex flex-col dark:bg-purple-950">
+              <main className="flex-1 overflow-hidden relative flex flex-col dark:bg-gray-950">
                 
                 {/* CHAT */}
                 {activeTab === 'chat' && (
                   <div className="flex flex-col h-full w-full relative">
-                    {showEasterEgg && <div className="absolute inset-0 z-50 pointer-events-none flex justify-center">{floatingHearts.map(h => <Icon key={h.id} name="heart" className="floating-heart-anim text-rose-500 absolute" size={h.size} fill="currentColor" style={{ left: h.left, animationDelay: h.delay, animationDuration: h.duration }} />)}</div>}
+                    {showEasterEgg && <div className="absolute inset-0 z-50 pointer-events-none flex justify-center">{floatingHearts.map(h => <Icon key={h.id} name="heart" className="floating-heart-anim text-rose-500 dark:text-purple-500 absolute" size={h.size} fill="currentColor" style={{ left: h.left, animationDelay: h.delay, animationDuration: h.duration }} />)}</div>}
                     <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
                       {messages.map((msg, idx) => {
                         const isMe = msg.sender === activeProfile;
@@ -462,32 +462,32 @@
                         const time = msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Just now';
                         return (
                           <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-2 group`}>
-                            {showName && <span className="text-[10px] text-gray-400 dark:text-purple-400 ml-1 mb-1">{msg.senderName}</span>}
+                            {showName && <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-1 mb-1">{msg.senderName}</span>}
                             
                             <div className="flex items-center gap-2">
-                              {/* Delete button (only for current user's messages) */}
+                              {/* Delete button */}
                               {isMe && (
                                 <button 
                                   onClick={() => deleteMessage(msg.id)} 
-                                  className="opacity-40 hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity p-1"
+                                  className="opacity-40 hover:opacity-100 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-opacity p-1"
                                 >
                                   <Icon name="trash" size={14} />
                                 </button>
                               )}
                               
-                              <div className={`max-w-[75%] px-4 py-2.5 text-[15px] ${isMe ? 'bg-rose-500 text-white rounded-2xl rounded-br-sm' : 'bg-white dark:bg-purple-800 dark:text-white rounded-2xl rounded-bl-sm border dark:border-purple-700'}`}>
+                              <div className={`max-w-[75%] px-4 py-2.5 text-[15px] ${isMe ? 'bg-rose-500 dark:bg-purple-600 text-white rounded-2xl rounded-br-sm' : 'bg-white dark:bg-gray-800 dark:text-gray-100 rounded-2xl rounded-bl-sm border dark:border-gray-700'}`}>
                                 <p className="break-words whitespace-pre-wrap">{msg.text}</p>
                               </div>
                             </div>
 
-                            <p className="text-[10px] mt-1 text-gray-400 dark:text-purple-400">{time}</p>
+                            <p className="text-[10px] mt-1 text-gray-400 dark:text-gray-600">{time}</p>
                           </div>
                         );
                       })}
                     </div>
-                    <form onSubmit={sendMessage} className="p-3 bg-white dark:bg-purple-900 border-t dark:border-purple-800 flex gap-2 items-end z-10">
-                      <textarea value={inputText} onChange={e => setInputText(e.target.value)} placeholder="Message..." className="flex-1 px-4 py-3 bg-gray-100 dark:bg-purple-800 rounded-2xl text-[15px] dark:text-white focus:outline-none resize-none border border-transparent dark:focus:border-purple-600" rows="1" />
-                      <button type="submit" disabled={!inputText.trim()} className="w-11 h-11 bg-rose-500 text-white rounded-full flex items-center justify-center disabled:opacity-50 transition-opacity"><Icon name="send" size={18} className="ml-1" /></button>
+                    <form onSubmit={sendMessage} className="p-3 bg-white dark:bg-gray-900 border-t dark:border-gray-800 flex gap-2 items-end z-10">
+                      <textarea value={inputText} onChange={e => setInputText(e.target.value)} placeholder="Message..." className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-2xl text-[15px] dark:text-white focus:outline-none resize-none border border-transparent dark:focus:border-purple-500/50 transition-colors" rows="1" />
+                      <button type="submit" disabled={!inputText.trim()} className="w-11 h-11 bg-rose-500 dark:bg-purple-600 text-white rounded-full flex items-center justify-center disabled:opacity-50 transition-opacity"><Icon name="send" size={18} className="ml-1" /></button>
                     </form>
                   </div>
                 )}
@@ -495,23 +495,23 @@
                 {/* TRACKER */}
                 {activeTab === 'tracker' && (
                   <div className="p-6 h-full overflow-y-auto space-y-6">
-                    <div className="bg-gradient-to-br from-rose-500 to-pink-500 p-8 rounded-3xl text-center text-white shadow-lg">
-                      <p className="text-rose-100 text-sm font-bold uppercase tracking-widest mb-2">Days Together</p>
+                    <div className="bg-gradient-to-br from-rose-500 to-pink-500 dark:from-purple-600 dark:to-purple-900 p-8 rounded-3xl text-center text-white shadow-lg">
+                      <p className="text-white/80 text-sm font-bold uppercase tracking-widest mb-2">Days Together</p>
                       <h2 className="text-6xl font-black mb-1 drop-shadow-md">{daysSinceAnniversary}</h2>
                     </div>
                     <div className="grid grid-cols-2 gap-4 mt-6">
-                      <div className="bg-white dark:bg-purple-900 p-5 rounded-3xl border dark:border-purple-800 flex flex-col items-center"><Icon name="heart" className="text-rose-500 mb-2" size={28} fill="currentColor"/><p className="text-3xl font-black dark:text-white mb-1">{jarData.totalHearts || 0}</p><p className="text-[11px] text-gray-500 dark:text-purple-400 font-bold uppercase text-center">Interactions</p></div>
-                      <div className="bg-white dark:bg-purple-900 p-5 rounded-3xl border dark:border-purple-800 flex flex-col items-center"><Icon name="sparkles" className="text-yellow-500 mb-2" size={28} fill="currentColor"/><p className="text-3xl font-black dark:text-white mb-1">{jarData.burstCount || 0}</p><p className="text-[11px] text-gray-500 dark:text-purple-400 font-bold uppercase text-center">Bursts</p></div>
+                      <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border dark:border-gray-800 flex flex-col items-center"><Icon name="heart" className="text-rose-500 dark:text-purple-500 mb-2" size={28} fill="currentColor"/><p className="text-3xl font-black dark:text-white mb-1">{jarData.totalHearts || 0}</p><p className="text-[11px] text-gray-500 dark:text-gray-500 font-bold uppercase text-center">Interactions</p></div>
+                      <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border dark:border-gray-800 flex flex-col items-center"><Icon name="sparkles" className="text-yellow-500 dark:text-yellow-400 mb-2" size={28} fill="currentColor"/><p className="text-3xl font-black dark:text-white mb-1">{jarData.burstCount || 0}</p><p className="text-[11px] text-gray-500 dark:text-gray-500 font-bold uppercase text-center">Bursts</p></div>
                     </div>
                     <div className="space-y-4 pb-10 mt-8">
                       <h3 className="text-lg font-bold dark:text-white px-2">Upcoming</h3>
                       {upcomingEvents.map((evt) => (
-                        <div key={evt.id} className="bg-white dark:bg-purple-900 p-4 rounded-2xl border dark:border-purple-800">
+                        <div key={evt.id} className="bg-white dark:bg-gray-900 p-4 rounded-2xl border dark:border-gray-800">
                           <div className="flex justify-between items-end mb-3">
-                            <div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${evt.color}`}><Icon name="heart" size={20} fill="currentColor"/></div><div><h4 className="font-bold dark:text-white">{evt.name}</h4><p className="text-xs text-gray-400 dark:text-purple-300">{evt.nextDate.toLocaleDateString(undefined, {month: 'long', day: 'numeric'})}</p></div></div>
-                            <span className={`text-sm font-black ${evt.daysRemaining === 0 ? 'text-rose-500 animate-pulse' : 'text-gray-600 dark:text-purple-300'}`}>{evt.daysRemaining === 0 ? 'Today!' : `${evt.daysRemaining} days`}</span>
+                            <div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${evt.color}`}><Icon name="heart" size={20} fill="currentColor"/></div><div><h4 className="font-bold dark:text-white">{evt.name}</h4><p className="text-xs text-gray-400 dark:text-gray-500">{evt.nextDate.toLocaleDateString(undefined, {month: 'long', day: 'numeric'})}</p></div></div>
+                            <span className={`text-sm font-black ${evt.daysRemaining === 0 ? 'text-rose-500 dark:text-purple-400 animate-pulse' : 'text-gray-600 dark:text-gray-400'}`}>{evt.daysRemaining === 0 ? 'Today!' : `${evt.daysRemaining} days`}</span>
                           </div>
-                          <div className="w-full h-2.5 bg-gray-100 dark:bg-purple-950 rounded-full overflow-hidden mt-1 relative"><div className={`absolute top-0 left-0 h-full rounded-full ${evt.color}`} style={{ width: `${evt.progress}%` }} /></div>
+                          <div className="w-full h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mt-1 relative"><div className={`absolute top-0 left-0 h-full rounded-full ${evt.color}`} style={{ width: `${evt.progress}%` }} /></div>
                         </div>
                       ))}
                     </div>
@@ -524,10 +524,10 @@
                     {isJarBursting && <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">{burstParticles.map(p => <Icon key={p.id} name="heart" size={p.size} className={`jar-burst-particle`} style={{ color: p.colorHex, '--tx': p.tx, '--ty': p.ty, '--rot': p.rot, animationDelay: p.delay }} fill="currentColor" />)}</div>}
                     
                     {isHalfway && (
-                      <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center flex-col gap-4 bg-white/50 dark:bg-purple-950/50 backdrop-blur-sm animate-pop">
-                        <Icon name="heart" className="text-rose-500 halfway-anim" size={100} fill="currentColor" />
-                        <h2 className="text-4xl font-black text-rose-500 drop-shadow-md text-center">500!</h2>
-                        <p className="text-gray-800 dark:text-white font-bold text-lg">Halfway there!</p>
+                      <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center flex-col gap-4 bg-white/50 dark:bg-gray-950/70 backdrop-blur-sm animate-pop">
+                        <Icon name="heart" className="text-rose-500 dark:text-purple-500 halfway-anim" size={100} fill="currentColor" />
+                        <h2 className="text-4xl font-black text-rose-500 dark:text-purple-400 drop-shadow-md text-center">500!</h2>
+                        <p className="text-gray-800 dark:text-gray-200 font-bold text-lg">Halfway there!</p>
                       </div>
                     )}
 
@@ -536,11 +536,11 @@
                     <div className="w-full max-w-xs mx-auto mb-6 z-10 mt-auto flex flex-col items-center">
                       <div className="relative w-32 h-44 mb-3">
                         {/* Jar Highlights / Details */}
-                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-20 h-4 border-4 border-gray-300 dark:border-purple-700 rounded-sm bg-gray-100 dark:bg-purple-800 z-20 shadow-sm"></div>
-                        <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-16 h-3 border-l-4 border-r-4 border-gray-300 dark:border-purple-700 bg-white/40 dark:bg-purple-900/40 z-10"></div>
+                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-20 h-4 border-4 border-gray-300 dark:border-gray-700 rounded-sm bg-gray-100 dark:bg-gray-800 z-20 shadow-sm"></div>
+                        <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-16 h-3 border-l-4 border-r-4 border-gray-300 dark:border-gray-700 bg-white/40 dark:bg-gray-800/40 z-10"></div>
                         
                         {/* Main Jar Container with Liquid Fill */}
-                        <div className="absolute inset-0 border-4 border-gray-300 dark:border-purple-700 rounded-b-[2.5rem] rounded-t-3xl overflow-hidden bg-white/40 dark:bg-purple-900/40 backdrop-blur-sm shadow-inner z-10 flex items-end">
+                        <div className="absolute inset-0 border-4 border-gray-300 dark:border-gray-700 rounded-b-[2.5rem] rounded-t-3xl overflow-hidden bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm shadow-inner z-10 flex items-end">
                            
                            {/* The Liquid */}
                            <div 
@@ -550,7 +550,6 @@
                                 background: `linear-gradient(to top, ${currentLiquidMood.hexBottom}, ${currentLiquidMood.hexTop})`
                               }}
                            >
-                             {/* Glossy top edge of the liquid */}
                              <div className="absolute top-0 left-0 w-full h-1.5 bg-white/30 rounded-full blur-[1px]"></div>
                            </div>
 
@@ -566,27 +565,27 @@
                         </div>
                       </div>
                       
-                      <div className="text-sm font-bold text-gray-500 dark:text-purple-300 bg-white dark:bg-purple-900 px-4 py-1.5 rounded-full shadow-sm border border-gray-100 dark:border-purple-800">
+                      <div className="text-sm font-bold text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 px-4 py-1.5 rounded-full shadow-sm border border-gray-100 dark:border-gray-800">
                         {jarData.currentCount || 0} / 1000 
                       </div>
                     </div>
 
-                    <div className="bg-white dark:bg-purple-900 p-5 rounded-3xl border dark:border-purple-800 z-10">
-                      <p className="text-center text-xs font-bold text-gray-400 dark:text-purple-400 mb-4 uppercase">Tap to add your mood</p>
+                    <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border dark:border-gray-800 z-10">
+                      <p className="text-center text-xs font-bold text-gray-400 dark:text-gray-500 mb-4 uppercase">Tap to add your mood</p>
                       <div className="grid grid-cols-3 gap-y-4 gap-x-2 justify-items-center">
                         {MOODS.map(mood => (
-                          <button key={mood.id} onClick={() => handleAddHeartToJar(mood)} className="flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-purple-800 w-full group transition-colors">
-                            <div className="w-12 h-12 rounded-full bg-gray-50 dark:bg-purple-950 border dark:border-purple-800 flex items-center justify-center transition-transform group-active:scale-95">
+                          <button key={mood.id} onClick={() => handleAddHeartToJar(mood)} className="flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 w-full group transition-colors">
+                            <div className="w-12 h-12 rounded-full bg-gray-50 dark:bg-gray-950 border dark:border-gray-800 flex items-center justify-center transition-transform group-active:scale-95">
                               <Icon name="heart" size={24} className={mood.color} fill="currentColor" />
                             </div>
-                            <span className="text-xs font-bold dark:text-purple-200">{mood.label}</span>
+                            <span className="text-xs font-bold dark:text-gray-300">{mood.label}</span>
                           </button>
                         ))}
                       </div>
                     </div>
 
                     <div className="mt-8 flex justify-center z-10">
-                      <button onClick={handleResetJar} className="text-[11px] text-gray-400 dark:text-purple-400 hover:text-red-500 font-bold flex items-center gap-1.5 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
+                      <button onClick={handleResetJar} className="text-[11px] text-gray-400 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-500 font-bold flex items-center gap-1.5 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10">
                         <Icon name="trash" size={14} />
                         RESET JAR
                       </button>
@@ -596,8 +595,8 @@
                 )}
               </main>
 
-              <footer className="p-3 bg-white dark:bg-purple-900 border-t dark:border-purple-800 flex justify-center z-10">
-                <button onClick={() => setActiveProfile(null)} className="text-xs font-bold text-gray-400 dark:text-purple-400 hover:text-rose-500 dark:hover:text-rose-400 flex items-center gap-2 px-4 py-2 transition-colors"><Icon name="user" size={14} /> Switch Profile</button>
+              <footer className="p-3 bg-white dark:bg-gray-900 border-t dark:border-gray-800 flex justify-center z-10">
+                <button onClick={() => setActiveProfile(null)} className="text-xs font-bold text-gray-400 dark:text-gray-500 hover:text-rose-500 dark:hover:text-purple-400 flex items-center gap-2 px-4 py-2 transition-colors"><Icon name="user" size={14} /> Switch Profile</button>
               </footer>
             </div>
           </div>
