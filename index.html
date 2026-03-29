@@ -48,6 +48,10 @@
       left: 50%;
       animation: burstOut 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
     }
+    /* Liquid transition class */
+    .liquid-morph {
+      transition: height 1s cubic-bezier(0.4, 0, 0.2, 1), background 1s ease-in-out;
+    }
   </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900">
@@ -74,7 +78,7 @@
     const db = firebase.firestore();
 
     // --- INLINE ICONS ---
-    const Icon = ({ name, size=24, className="", fill="none" }) => {
+    const Icon = ({ name, size=24, className="", fill="none", style={} }) => {
       const icons = {
         heart: <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>,
         lock: <><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>,
@@ -89,7 +93,7 @@
         user: <><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>
       };
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
           {icons[name]}
         </svg>
       );
@@ -114,14 +118,14 @@
       return { daysRemaining: Math.ceil(remainingTime / (1000 * 60 * 60 * 24)), progress, nextDate: nextOccurrence };
     };
 
-    // Added gradient colors for the jar liquid
+    // Added explicit hex codes to ensure background gradients animate properly
     const MOODS = [
-      { id: 'happy', label: 'Happy', color: 'text-yellow-400', gradient: 'from-yellow-500 to-yellow-400' },
-      { id: 'loved', label: 'Loved', color: 'text-rose-500', gradient: 'from-rose-500 to-rose-400' },
-      { id: 'calm', label: 'Calm', color: 'text-blue-400', gradient: 'from-blue-500 to-blue-400' },
-      { id: 'energy', label: 'Energy', color: 'text-orange-500', gradient: 'from-orange-500 to-orange-400' },
-      { id: 'growth', label: 'Growth', color: 'text-green-500', gradient: 'from-green-500 to-green-400' },
-      { id: 'dreamy', label: 'Dreamy', color: 'text-purple-400', gradient: 'from-purple-500 to-purple-400' },
+      { id: 'happy', label: 'Happy', color: 'text-yellow-400', hexTop: '#FACC15', hexBottom: '#EAB308' },
+      { id: 'loved', label: 'Loved', color: 'text-rose-500', hexTop: '#FB7185', hexBottom: '#E11D48' },
+      { id: 'calm', label: 'Calm', color: 'text-blue-400', hexTop: '#60A5FA', hexBottom: '#3B82F6' },
+      { id: 'energy', label: 'Energy', color: 'text-orange-500', hexTop: '#FB923C', hexBottom: '#EA580C' },
+      { id: 'growth', label: 'Growth', color: 'text-green-500', hexTop: '#4ADE80', hexBottom: '#22C55E' },
+      { id: 'dreamy', label: 'Dreamy', color: 'text-purple-400', hexTop: '#C084FC', hexBottom: '#9333EA' },
     ];
 
     function App() {
@@ -225,7 +229,6 @@
         });
       };
 
-      // UPDATED logic to track specific mood counts
       const handleAddHeartToJar = async (mood) => {
         const docRef = db.collection("shared").doc("jar");
         const increment = firebase.firestore.FieldValue.increment(1);
@@ -244,7 +247,7 @@
           await docRef.set({ 
             currentCount: increment, 
             totalHearts: increment,
-            [`moodCounts.${mood.id}`]: increment // Increment specific mood
+            [`moodCounts.${mood.id}`]: increment 
           }, { merge: true });
         }
       };
@@ -270,21 +273,10 @@
           .sort((a, b) => a.daysRemaining - b.daysRemaining);
       }, [config]);
 
-      const burstParticles = useMemo(() => Array.from({ length: 100 }).map((_, i) => ({
-        id: i, tx: `${(Math.random() - 0.5) * 800}px`, ty: `${(Math.random() - 0.5) * 800}px`,
-        rot: `${Math.random() * 720}deg`, delay: `${Math.random() * 0.2}s`,
-        colorClass: MOODS[Math.floor(Math.random() * MOODS.length)].color, size: Math.random() * 20 + 15
-      })), [isJarBursting]);
-
-      const floatingHearts = useMemo(() => Array.from({ length: 25 }).map((_, i) => ({
-        id: i, size: Math.random() * 20 + 15, left: `${Math.random() * 90 + 5}%`,
-        delay: `${Math.random() * 1.5}s`, duration: `${Math.random() * 2 + 3}s`
-      })), [showEasterEgg]);
-
-      // Calculate the dominant color based on the highest mood count
-      const dominantMoodGradient = useMemo(() => {
+      // Find the dominant mood explicitly
+      const dominantMood = useMemo(() => {
         if (!jarData.moodCounts || Object.keys(jarData.moodCounts).length === 0) {
-          return "from-rose-500 to-rose-400"; // Default empty jar color
+          return MOODS.find(m => m.id === 'loved'); // Default to loved
         }
         
         let maxCount = -1;
@@ -297,9 +289,20 @@
           }
         }
         
-        const mood = MOODS.find(m => m.id === dominantId);
-        return mood ? mood.gradient : "from-rose-500 to-rose-400";
+        return MOODS.find(m => m.id === dominantId) || MOODS.find(m => m.id === 'loved');
       }, [jarData.moodCounts]);
+
+      const burstParticles = useMemo(() => Array.from({ length: 100 }).map((_, i) => ({
+        id: i, tx: `${(Math.random() - 0.5) * 800}px`, ty: `${(Math.random() - 0.5) * 800}px`,
+        rot: `${Math.random() * 720}deg`, delay: `${Math.random() * 0.2}s`,
+        // Defaulting the burst particles to the dominant color for a unified effect
+        colorHex: dominantMood.hexBottom, size: Math.random() * 20 + 15
+      })), [isJarBursting, dominantMood]);
+
+      const floatingHearts = useMemo(() => Array.from({ length: 25 }).map((_, i) => ({
+        id: i, size: Math.random() * 20 + 15, left: `${Math.random() * 90 + 5}%`,
+        delay: `${Math.random() * 1.5}s`, duration: `${Math.random() * 2 + 3}s`
+      })), [showEasterEgg]);
 
       if (!isAuthReady) return <div className="h-screen w-full bg-rose-50 flex items-center justify-center"><Icon name="heart" className="text-rose-500 animate-pulse" size={50} /></div>;
 
@@ -461,32 +464,31 @@
                 {/* FUN */}
                 {activeTab === 'fun' && (
                   <div className="h-full flex flex-col p-6 w-full relative overflow-y-auto pb-8">
-                    {isJarBursting && <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">{burstParticles.map(p => <Icon key={p.id} name="heart" size={p.size} className={`jar-burst-particle ${p.colorClass}`} fill="currentColor" style={{ '--tx': p.tx, '--ty': p.ty, '--rot': p.rot, animationDelay: p.delay }} />)}</div>}
+                    {isJarBursting && <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">{burstParticles.map(p => <Icon key={p.id} name="heart" size={p.size} className={`jar-burst-particle`} style={{ color: p.colorHex, '--tx': p.tx, '--ty': p.ty, '--rot': p.rot, animationDelay: p.delay }} fill="currentColor" />)}</div>}
                     
                     <div className="text-center mb-4 z-10"><h2 className="text-2xl font-black dark:text-white">Mood Jar</h2></div>
                     
                     <div className="w-full max-w-xs mx-auto mb-6 z-10 mt-auto flex flex-col items-center">
                       <div className="relative w-32 h-44 mb-3">
-                        {/* Jar Lid */}
                         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-20 h-4 border-4 border-gray-300 dark:border-gray-600 rounded-sm bg-gray-100 dark:bg-gray-700 z-20 shadow-sm"></div>
-                        {/* Jar Neck */}
                         <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-16 h-3 border-l-4 border-r-4 border-gray-300 dark:border-gray-600 bg-white/40 dark:bg-gray-800/40 z-10"></div>
-                        {/* Jar Body */}
                         <div className="absolute inset-0 border-4 border-gray-300 dark:border-gray-600 rounded-b-[2.5rem] rounded-t-3xl overflow-hidden bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm flex items-end shadow-inner z-10">
-                           {/* Liquid Fill - dynamically updated based on dominant mood */}
-                           <div className={`w-full bg-gradient-to-t ${dominantMoodGradient} transition-colors duration-700 ease-out relative flex items-start justify-center overflow-hidden`} style={{ height: `${Math.min(100, ((jarData.currentCount || 0) / 1000) * 100)}%`, transitionProperty: 'height, background-color, border-color, text-decoration-color, fill, stroke' }}>
-                              {/* Wave/Surface effect */}
+                           {/* Liquid Fill - dynamically updated background via inline style */}
+                           <div 
+                             className="w-full relative flex items-start justify-center overflow-hidden liquid-morph" 
+                             style={{ 
+                               height: `${Math.min(100, ((jarData.currentCount || 0) / 1000) * 100)}%`,
+                               background: `linear-gradient(to top, ${dominantMood.hexBottom}, ${dominantMood.hexTop})`
+                             }}
+                           >
                               <div className="absolute top-0 w-full h-2 bg-white/30 rounded-full scale-110"></div>
-                              {/* Floating Hearts inside liquid */}
                               <Icon name="heart" className="absolute top-2 left-2 text-white/50" size={16} fill="currentColor" />
                               <Icon name="heart" className="absolute top-8 right-3 text-white/50" size={12} fill="currentColor" />
                               <Icon name="heart" className="absolute bottom-4 left-6 text-white/40" size={20} fill="currentColor" />
                            </div>
-                           {/* Glass Reflections */}
                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/30 pointer-events-none"></div>
                            <div className="absolute top-4 right-3 w-2 h-20 bg-white/30 rounded-full pointer-events-none transform -rotate-3 blur-[1px]"></div>
                         </div>
-                        {/* Percentage Label Inside Jar */}
                         <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none drop-shadow-md">
                           <span className={`text-2xl font-black ${(((jarData.currentCount || 0) / 1000) * 100) > 50 ? 'text-white' : 'text-gray-700 dark:text-white'}`}>
                             {(((jarData.currentCount || 0) / 1000) * 100).toFixed(0)}%
@@ -503,7 +505,12 @@
                       <p className="text-center text-xs font-bold text-gray-400 mb-4 uppercase">Tap to add your mood</p>
                       <div className="grid grid-cols-3 gap-y-4 gap-x-2 justify-items-center">
                         {MOODS.map(mood => (
-                          <button key={mood.id} onClick={() => handleAddHeartToJar(mood)} className="flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 w-full group"><div className="w-12 h-12 rounded-full bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 flex items-center justify-center"><Icon name="heart" size={24} className={mood.color} fill="currentColor" /></div><span className="text-xs font-bold dark:text-gray-300">{mood.label}</span></button>
+                          <button key={mood.id} onClick={() => handleAddHeartToJar(mood)} className="flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 w-full group">
+                            <div className="w-12 h-12 rounded-full bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 flex items-center justify-center">
+                              <Icon name="heart" size={24} className={mood.color} fill="currentColor" />
+                            </div>
+                            <span className="text-xs font-bold dark:text-gray-300">{mood.label}</span>
+                          </button>
                         ))}
                       </div>
                     </div>
