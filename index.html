@@ -255,10 +255,10 @@
 
       const handleAddHeartToJar = async (mood) => {
         const docRef = db.collection("shared").doc("jar");
-        const increment = firebase.firestore.FieldValue.increment(1);
         const nextCount = (jarData.currentCount || 0) + 1;
 
-        if (nextCount === 500) {
+        // Fire 500 animation once when crossing the exact threshold
+        if (nextCount === 500 && (jarData.currentCount || 0) < 500) {
           setIsHalfway(true);
           setTimeout(() => setIsHalfway(false), 4000);
         }
@@ -266,23 +266,27 @@
         if (nextCount >= 1000) {
           setIsJarBursting(true);
           setTimeout(() => setIsJarBursting(false), 4000);
+          
+          // Use .set without merge to force the moodCounts map to properly empty out
           await docRef.set({ 
             currentCount: 0, 
-            totalHearts: increment, 
-            burstCount: increment,
+            totalHearts: (jarData.totalHearts || 0) + 1, 
+            burstCount: (jarData.burstCount || 0) + 1,
             moodCounts: {} 
-          }, { merge: true });
+          });
         } else {
+          // Normal increment using Firestore operations to prevent race conditions
           await docRef.set({ 
-            currentCount: increment, 
-            totalHearts: increment,
-            [`moodCounts.${mood.id}`]: increment 
+            currentCount: firebase.firestore.FieldValue.increment(1), 
+            totalHearts: firebase.firestore.FieldValue.increment(1),
+            [`moodCounts.${mood.id}`]: firebase.firestore.FieldValue.increment(1) 
           }, { merge: true });
         }
       };
 
       const handleResetJar = async () => {
         if (window.confirm("Are you sure you want to completely reset the jar progress? This action cannot be undone.")) {
+          // Overwrite the document completely to clear out everything
           await db.collection("shared").doc("jar").set({
             currentCount: 0, 
             totalHearts: 0, 
@@ -340,42 +344,58 @@
         delay: `${Math.random() * 1.5}s`, duration: `${Math.random() * 2 + 3}s`
       })), [showEasterEgg]);
 
-      // Generate the tiny individual hearts inside the jar based on counts
+      // REVISED HEART LOGIC: Highly Performant, Visually Accurate
       const heartElements = useMemo(() => {
-        if (!jarData.moodCounts) return [];
-        let colors = [];
-        MOODS.forEach(mood => {
-            const count = jarData.moodCounts[mood.id] || 0;
-            for(let i=0; i<count; i++) colors.push(mood.color);
-        });
-        
-        return colors.map((colorClass, i) => {
-            // Seeded random function to keep positions deterministic
-            const seed = i;
-            const pseudoRandom = (s) => { let x = Math.sin(s) * 10000; return x - Math.floor(x); };
-            
-            const bottomPercent = (i / 1000) * 105; // Fills from bottom (0%) to top (~100%)
-            const leftPercent = pseudoRandom(seed) * 90; // Distributes horizontally
-            const size = pseudoRandom(seed + 1) * 8 + 6; // Sizes between 6px and 14px
-            const rot = pseudoRandom(seed + 2) * 360; // Random rotation
+        const total = jarData.currentCount || 0;
+        if (total === 0) return [];
 
-            return (
-                <Icon 
-                    key={i} 
-                    name="heart" 
-                    size={size} 
-                    className={`absolute ${colorClass} drop-shadow-sm animate-pop`} 
-                    fill="currentColor"
-                    style={{
-                        left: `${leftPercent}%`,
-                        bottom: `${bottomPercent}%`,
-                        transform: `rotate(${rot}deg)`,
-                        zIndex: Math.floor(pseudoRandom(seed + 3) * 10)
-                    }}
-                />
-            )
+        const MAX_HEARTS = 150; // Cap at 150 to keep browsers running smooth
+        const fillPercentage = total / 1000;
+        let colors = [];
+
+        // Distribute the colors proportionately 
+        MOODS.forEach(mood => {
+          const count = jarData.moodCounts?.[mood.id] || 0;
+          const proportion = count / total;
+          const heartsToRender = Math.floor(proportion * Math.min(total, MAX_HEARTS));
+          for (let i = 0; i < heartsToRender; i++) colors.push(mood.color);
         });
-      }, [jarData.moodCounts]);
+
+        // Mix the colors up naturally using a deterministic shuffle
+        for (let i = colors.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.sin(i * 123) * 10000 % 1 * (i + 1));
+          [colors[i], colors[j]] = [colors[j], colors[i]];
+        }
+
+        return colors.map((colorClass, i) => {
+          const seed = i;
+          const pseudoRandom = (s) => { let x = Math.sin(s) * 10000; return x - Math.floor(x); };
+          
+          // Randomize positioning but constrain height directly to the current fill percentage 
+          const leftPercent = pseudoRandom(seed) * 80 + 5; 
+          const maxBottom = Math.max(5, fillPercentage * 100);
+          const bottomPercent = pseudoRandom(seed + 1) * maxBottom;
+          const size = pseudoRandom(seed + 2) * 10 + 6; 
+          const rot = pseudoRandom(seed + 3) * 360; 
+
+          return (
+            <Icon 
+              key={i} 
+              name="heart" 
+              size={size} 
+              className={`absolute ${colorClass} drop-shadow-sm animate-pop`} 
+              fill="currentColor"
+              style={{
+                left: `${leftPercent}%`,
+                bottom: `${bottomPercent}%`,
+                transform: `rotate(${rot}deg)`,
+                zIndex: Math.floor(pseudoRandom(seed + 4) * 10),
+                transition: 'bottom 0.5s ease-in-out, left 0.5s ease-in-out'
+              }}
+            />
+          )
+        });
+      }, [jarData.currentCount, jarData.moodCounts]);
 
       if (!isAuthReady) return <div className="h-screen w-full bg-rose-50 flex items-center justify-center"><Icon name="heart" className="text-rose-500 animate-pulse" size={50} /></div>;
 
@@ -564,7 +584,7 @@
                         <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-16 h-3 border-l-4 border-r-4 border-gray-300 dark:border-gray-600 bg-white/40 dark:bg-gray-800/40 z-10"></div>
                         
                         <div className="absolute inset-0 border-4 border-gray-300 dark:border-gray-600 rounded-b-[2.5rem] rounded-t-3xl overflow-hidden bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm shadow-inner z-10">
-                           {/* Hearts container dynamically filling up */}
+                           {/* Rendered Hearts */}
                            {heartElements}
 
                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/30 pointer-events-none z-20"></div>
