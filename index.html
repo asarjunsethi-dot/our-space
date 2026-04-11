@@ -206,7 +206,10 @@
           });
 
           return () => { unsubConfig(); unsubJar(); unsubMessages(); };
-        }).catch(err => console.error("Firebase Auth Error:", err));
+        }).catch(err => {
+          console.error("Firebase Auth Error:", err);
+          alert("Authentication failed! Please make sure Anonymous Sign-in is enabled in your Firebase Console.\n\nError: " + err.message);
+        });
       }, []);
 
       useEffect(() => {
@@ -236,10 +239,15 @@
 
       const handleSaveConfig = async (e) => {
         e.preventDefault();
-        await db.collection("shared").doc("config").set({
-          partner1: p1Name, partner2: p2Name, p1Bday, p2Bday, anniversary: startDate
-        });
-        setIsEditing(false);
+        try {
+          await db.collection("shared").doc("config").set({
+            partner1: p1Name, partner2: p2Name, p1Bday, p2Bday, anniversary: startDate
+          });
+          setIsEditing(false);
+        } catch (error) {
+          console.error("Error saving config:", error);
+          alert("Failed to save data!\n\nThis usually means Cloud Firestore is not set up correctly in your Firebase Console, or your security rules are blocking writes.\n\nPlease check your Firestore Rules.");
+        }
       };
 
       const sendMessage = async (e) => {
@@ -247,58 +255,78 @@
         if (!inputText.trim() || !activeProfile || !config) return;
         const txt = inputText; setInputText(""); 
         
-        await db.collection("messages").add({
-          text: txt, sender: activeProfile,
-          senderName: activeProfile === 'partner1' ? config.partner1 : config.partner2,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        try {
+          await db.collection("messages").add({
+            text: txt, sender: activeProfile,
+            senderName: activeProfile === 'partner1' ? config.partner1 : config.partner2,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch (error) {
+          console.error("Message error:", error);
+          alert("Failed to send message. Check your Firestore database rules.");
+        }
       };
 
       const deleteMessage = async (msgId) => {
         if (window.confirm("Delete this message?")) {
-          await db.collection("messages").doc(msgId).delete();
+          try {
+            await db.collection("messages").doc(msgId).delete();
+          } catch (error) {
+            console.error("Delete error:", error);
+            alert("Failed to delete. Check your Firestore rules.");
+          }
         }
       };
 
       const handleAddHeartToJar = async (mood) => {
-        const docRef = db.collection("shared").doc("jar");
-        const nextCount = (jarData.currentCount || 0) + 1;
+        try {
+          const docRef = db.collection("shared").doc("jar");
+          const nextCount = (jarData.currentCount || 0) + 1;
 
-        if (nextCount === 500 && (jarData.currentCount || 0) < 500) {
-          setIsHalfway(true);
-          setTimeout(() => setIsHalfway(false), 4000);
-        }
+          if (nextCount === 500 && (jarData.currentCount || 0) < 500) {
+            setIsHalfway(true);
+            setTimeout(() => setIsHalfway(false), 4000);
+          }
 
-        if (nextCount >= 1000) {
-          setIsJarBursting(true);
-          setTimeout(() => setIsJarBursting(false), 4000);
-          
-          await docRef.set({ 
-            currentCount: 0, 
-            totalHearts: (jarData.totalHearts || 0) + 1, 
-            burstCount: (jarData.burstCount || 0) + 1,
-            moodCounts: {},
-            lastMood: mood.id
-          });
-        } else {
-          await docRef.set({ 
-            currentCount: firebase.firestore.FieldValue.increment(1), 
-            totalHearts: firebase.firestore.FieldValue.increment(1),
-            [`moodCounts.${mood.id}`]: firebase.firestore.FieldValue.increment(1),
-            lastMood: mood.id 
-          }, { merge: true });
+          if (nextCount >= 1000) {
+            setIsJarBursting(true);
+            setTimeout(() => setIsJarBursting(false), 4000);
+            
+            await docRef.set({ 
+              currentCount: 0, 
+              totalHearts: (jarData.totalHearts || 0) + 1, 
+              burstCount: (jarData.burstCount || 0) + 1,
+              moodCounts: {},
+              lastMood: mood.id
+            });
+          } else {
+            await docRef.set({ 
+              currentCount: firebase.firestore.FieldValue.increment(1), 
+              totalHearts: firebase.firestore.FieldValue.increment(1),
+              [`moodCounts.${mood.id}`]: firebase.firestore.FieldValue.increment(1),
+              lastMood: mood.id 
+            }, { merge: true });
+          }
+        } catch (error) {
+          console.error("Jar update error:", error);
+          alert("Failed to update jar. Check your Firestore rules.");
         }
       };
 
       const handleResetJar = async () => {
         if (window.confirm("Are you sure you want to completely reset the jar progress? This action cannot be undone.")) {
-          await db.collection("shared").doc("jar").set({
-            currentCount: 0, 
-            totalHearts: 0, 
-            burstCount: 0, 
-            moodCounts: {},
-            lastMood: 'loved'
-          });
+          try {
+            await db.collection("shared").doc("jar").set({
+              currentCount: 0, 
+              totalHearts: 0, 
+              burstCount: 0, 
+              moodCounts: {},
+              lastMood: 'loved'
+            });
+          } catch (error) {
+             console.error("Reset jar error:", error);
+             alert("Failed to reset jar. Check your Firestore rules.");
+          }
         }
       };
 
